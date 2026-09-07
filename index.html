@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Jumper - Tùy Chỉnh</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden; 
+            background: #0b0c10; 
+            color: #66fcf1; 
+            font-family: 'Courier New', Courier, monospace; 
+            touch-action: none; 
+            cursor: crosshair; 
+        }
+        canvas { 
+            display: block; 
+            width: 100vw; 
+            height: 100vh; 
+        }
+        #ui-layer { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            pointer-events: none; 
+            z-index: 10;
+        }
+        .stat { margin-bottom: 5px; font-size: 16px; font-weight: bold; text-shadow: 0 0 5px #66fcf1;}
+        #score-display { font-size: 24px; color: #45a29e; }
+        
+        /* Nút Cài đặt */
+        #settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 30px;
+            cursor: pointer;
+            z-index: 15;
+            transition: transform 0.2s;
+            text-shadow: 0 0 10px #66fcf1;
+        }
+        #settings-btn:hover { transform: rotate(90deg); }
+
+        /* Menu Cài đặt */
+        #settings-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(11, 12, 16, 0.95);
+            border: 2px solid #66fcf1;
+            border-radius: 12px;
+            padding: 25px;
+            width: 80%;
+            max-width: 320px;
+            z-index: 30;
+            display: none;
+            box-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
+        }
+        #settings-menu h2 {
+            margin: 0 0 20px 0;
+            text-align: center;
+            text-shadow: 0 0 8px #66fcf1;
+        }
+        .setting-row { margin-bottom: 20px; }
+        .setting-row label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: #45a29e;
+        }
+        
+        #game-over { 
+            position: absolute; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(11, 12, 16, 0.9); 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 20;
+            display: none;
+        }
+        #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7; color: #c5c6c7; margin-bottom: 10px; text-align: center;}
+        #game-over p { font-size: 20px; margin-bottom: 30px; }
+        
+        button { 
+            padding: 12px 30px; 
+            font-size: 18px; font-weight: bold;
+            background: #1f2833; 
+            color: #66fcf1; 
+            border: 2px solid #66fcf1; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            box-shadow: 0 0 10px #66fcf1;
+            transition: 0.2s;
+            width: 100%;
+        }
+        button:hover { background: rgba(102, 252, 241, 0.2); }
+        button:active { background: #66fcf1; color: #0b0c10; }
+    </style>
+</head>
+<body>
+    <div id="ui-layer">
+        <div class="stat" id="score-display">Điểm: <span id="score">0</span></div>
+        <div class="stat">Chiều dài: <span id="length">1</span>x</div>
+    </div>
+
+    <!-- Nút mở Menu Cài đặt -->
+    <div id="settings-btn">⚙️</div>
+
+    <!-- Bảng Cài đặt -->
+    <div id="settings-menu">
+        <h2>TÙY CHỈNH VẬT LÝ</h2>
+        <div class="setting-row">
+            <label>Trọng lực (Rơi): <span id="grav-val">0.3</span></label>
+            <input type="range" id="grav-slider" min="0.05" max="1.0" step="0.05" value="0.3">
+        </div>
+        <div class="setting-row">
+            <label>Sức bật (Nhảy): <span id="jump-val">11</span></label>
+            <input type="range" id="jump-slider" min="5" max="25" step="0.5" value="11">
+        </div>
+        <button id="close-settings-btn">Đóng & Tiếp tục</button>
+    </div>
+
+    <div id="game-over">
+        <h1>TRẠM KHÔNG GIAN SỤP ĐỔ</h1>
+        <p>Thành tích: <span id="final-score">0</span> bậc</p>
+        <button id="restart-btn" style="width: auto;">Phục Hồi Lại</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // --- CÁC THÔNG SỐ VẬT LÝ (Biến động thay vì Hằng số) ---
+        let gravity = 0.3;         
+        let baseJump = 11;        
+        
+        const PLATFORM_W = 95;       
+        const PLATFORM_H = 12;
+        const MIN_JUMP = 7.5;        
+
+        let player, platforms, score, isGameOver, isPaused, gameLoopId;
+
+        // Elements Menu
+        const settingsMenu = document.getElementById('settings-menu');
+        const gravSlider = document.getElementById('grav-slider');
+        const jumpSlider = document.getElementById('jump-slider');
+        const gravVal = document.getElementById('grav-val');
+        const jumpVal = document.getElementById('jump-val');
+
+        function initGame() {
+            score = 0;
+            isGameOver = false;
+            isPaused = false;
+            document.getElementById('game-over').style.display = 'none';
+            settingsMenu.style.display = 'none';
+
+            player = {
+                x: canvas.width / 2 - 15,
+                y: canvas.height / 2,
+                targetX: canvas.width / 2 - 15,
+                w: 30,
+                h: 30,
+                vy: 0,
+                jumpPower: baseJump,
+                level: 0
+            };
+
+            platforms = [];
+            platforms.push({ 
+                x: canvas.width / 2 - PLATFORM_W / 2, 
+                y: canvas.height - 100, 
+                w: PLATFORM_W, h: PLATFORM_H, 
+                visited: true 
+            });
+
+            generatePlatforms(canvas.height);
+            updateUI();
+            
+            // Xóa vòng lặp cũ (nếu có) trước khi tạo mới để tránh chạy đè
+            cancelAnimationFrame(gameLoopId);
+            loop();
+        }
+
+        // Tính khoảng cách an toàn dựa trên Trọng lực và Lực bật HIỆN TẠI
+        function getMaxJumpHeight() {
+            let maxTheoretical = (player.jumpPower * player.jumpPower) / (2 * gravity);
+            return maxTheoretical * 0.75; // Dung sai 75% cho an toàn
+        }
+
+        function generatePlatforms(startY) {
+            let lastP = platforms[platforms.length - 1];
+            let currentY = lastP ? lastP.y : startY;
+            
+            while (currentY > -canvas.height) {
+                let maxSafeGap = getMaxJumpHeight();
+                // Giới hạn khoảng cách tối thiểu
+                let minGap = Math.min(40, maxSafeGap * 0.5); 
+                
+                let gapY = Math.random() * (maxSafeGap - minGap) + minGap;
+                currentY -= gapY;
+                
+                let maxX = canvas.width - PLATFORM_W;
+                let newX = Math.random() * maxX;
+                
+                platforms.push({ 
+                    x: newX, y: currentY, 
+                    w: PLATFORM_W, h: PLATFORM_H, 
+                    visited: false 
+                });
+            }
+        }
+
+        function checkEvolution() {
+            let nextLevel = Math.floor(score / 10);
+            if (nextLevel > player.level) {
+                player.level = nextLevel;
+                player.h += 15; 
+                // Cập nhật lại jumpPower dựa trên cấu hình tùy chỉnh
+                player.jumpPower = baseJump - (player.level * 0.35);
+                
+                if (player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP; 
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('length').innerText = player.level + 1;
+        }
+
+        // --- XỬ LÝ SỰ KIỆN MENU ---
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            isPaused = true;
+            settingsMenu.style.display = 'block';
+        });
+
+        document.getElementById('close-settings-btn').addEventListener('click', () => {
+            settingsMenu.style.display = 'none';
+            // Cập nhật sức bật nếu người dùng vừa kéo thanh trượt
+            player.jumpPower = baseJump - (player.level * 0.35);
+            if (player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP; 
+            
+            // Nếu có thể nhảy quá thấp so với các bậc đã sinh trước đó, sinh lại từ đầu màn hình cho an toàn
+            generatePlatforms(0); 
+
+            isPaused = false;
+            loop(); // Tiếp tục vòng lặp
+        });
+
+        // Lắng nghe thanh trượt (Cập nhật thời gian thực vào con số)
+        gravSlider.addEventListener('input', (e) => {
+            gravity = parseFloat(e.target.value);
+            gravVal.innerText = gravity.toFixed(2);
+        });
+
+        jumpSlider.addEventListener('input', (e) => {
+            baseJump = parseFloat(e.target.value);
+            jumpVal.innerText = baseJump.toFixed(1);
+        });
+
+        function loop() {
+            if (isGameOver || isPaused) return;
+
+            // Di chuyển mượt mà bám sát
+            player.x += (player.targetX - player.x) * 0.4;
+
+            // Xuyên tường
+            if (player.x > canvas.width) player.x = -player.w;
+            if (player.x + player.w < 0) player.x = canvas.width;
+
+            player.vy += gravity;
+            player.y += player.vy;
+
+            // Xét va chạm
+            if (player.vy > 0) {
+                for (let i = 0; i < platforms.length; i++) {
+                    let p = platforms[i];
+                    let playerBottom = player.y + player.h;
+                    let prevPlayerBottom = playerBottom - player.vy;
+                    
+                    if (playerBottom >= p.y && prevPlayerBottom <= p.y + p.h) {
+                        if (player.x + player.w > p.x - 5 && player.x < p.x + p.w + 5) {
+                            player.vy = -player.jumpPower; 
+                            
+                            if (!p.visited) {
+                                p.visited = true;
+                                score++;
+                                checkEvolution();
+                                updateUI();
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            const cameraThreshold = canvas.height / 2;
+            if (player.y < cameraThreshold) {
+                let diff = cameraThreshold - player.y;
+                player.y = cameraThreshold;
+                platforms.forEach(p => p.y += diff);
+            }
+
+            platforms = platforms.filter(p => p.y < canvas.height + 100);
+            if (platforms[platforms.length - 1].y > 0) {
+                generatePlatforms(0);
+            }
+
+            if (player.y > canvas.height) {
+                gameOver();
+                return;
+            }
+
+            draw();
+            gameLoopId = requestAnimationFrame(loop);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0b0c10';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let p of platforms) {
+                if (!p.visited) {
+                    ctx.fillStyle = '#45a29e';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#66fcf1';
+                } else {
+                    ctx.fillStyle = '#1f2833';
+                    ctx.shadowBlur = 0;
+                }
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+            }
+
+            ctx.fillStyle = '#66fcf1';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#66fcf1';
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            
+            ctx.fillStyle = '#0b0c10';
+            ctx.shadowBlur = 0;
+            ctx.fillRect(player.x + 6, player.y + 6, player.w - 12, 6);
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('game-over').style.display = 'flex';
+        }
+
+        function handleMovement(xClient) {
+            if(!isPaused && !isGameOver) {
+                player.targetX = xClient - player.w / 2;
+            }
+        }
+
+        canvas.addEventListener('touchmove', (e) => {
+            if(e.target !== gravSlider && e.target !== jumpSlider) {
+                e.preventDefault();
+            }
+            handleMovement(e.touches[0].clientX);
+        }, {passive: false});
+
+        canvas.addEventListener('touchstart', (e) => {
+            if(e.target !== gravSlider && e.target !== jumpSlider) {
+                e.preventDefault();
+            }
+            handleMovement(e.touches[0].clientX);
+        }, {passive: false});
+
+        canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', initGame);
+
+        initGame();
+    </script>
+</body>
+</html>
