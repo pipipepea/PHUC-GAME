@@ -3,35 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Jumper - Google Sheets Leaderboard</title>
+    <title>Neon Jumper - By P&T</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background: #0b0c10; color: #66fcf1; font-family: 'Courier New', Courier, monospace; touch-action: none; cursor: crosshair; }
-        canvas { display: block; width: 100vw; height: 100vh; }
-        #ui-layer { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
+        canvas { display: block; width: 100vw; height: 100vh; position: absolute; top:0; left:0; z-index: 1;}
+        
+        #ui-layer { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; display: none;}
         .stat { margin-bottom: 5px; font-size: 16px; font-weight: bold; text-shadow: 0 0 5px #66fcf1;}
         #score-display { font-size: 24px; color: #45a29e; }
         .opponent-stat { color: #ff9f1c; text-shadow: 0 0 5px #ff9f1c; }
         .mic-stat { color: #ff0055; text-shadow: 0 0 5px #ff0055; font-size: 20px; margin-top: 10px;}
 
-        #mp-lobby { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 40; }
-        #mp-lobby h1 { font-size: 32px; color: #66fcf1; text-shadow: 0 0 15px #66fcf1; margin-bottom: 5px;}
-        #mp-lobby p { font-size: 16px; margin-bottom: 30px; color: #c5c6c7; }
-        .box { background: #1f2833; padding: 20px; border-radius: 12px; border: 1px solid #45a29e; width: 80%; max-width: 320px; text-align: center; margin-bottom: 15px; }
-        .box h3 { margin: 0 0 10px 0; color: #45a29e; }
-        #my-id-display { font-size: 28px; font-weight: bold; letter-spacing: 3px; color: #ff9f1c; margin-bottom: 10px; user-select: all;}
+        #mp-lobby { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: transparent; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 40; pointer-events: none;}
         
-        input[type="text"] { width: 90%; padding: 10px; font-size: 18px; text-align: center; background: #0b0c10; color: #66fcf1; border: 1px solid #45a29e; border-radius: 6px; font-family: inherit; margin-bottom: 15px; text-transform: uppercase; font-weight: bold;}
+        #lobby-content { pointer-events: auto; display: flex; flex-direction: column; align-items: center; width: 100%; margin-top: 130px;}
         
-        button { padding: 12px 20px; font-size: 16px; font-weight: bold; background: #1f2833; color: #66fcf1; border: 2px solid #66fcf1; border-radius: 8px; cursor: pointer; box-shadow: 0 0 10px #66fcf1; transition: 0.2s; width: 100%; margin-bottom: 10px; }
-        button:hover { background: rgba(102, 252, 241, 0.2); }
+        @keyframes neonFlicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% { text-shadow: 0 0 10px #66fcf1, 0 0 20px #66fcf1, 0 0 40px #66fcf1; color: #e0ffff; }
+            20%, 24%, 55% { text-shadow: none; color: #1f2833; }
+        }
+        #mp-lobby h1 { font-size: 34px; margin: 0; letter-spacing: 2px; position: absolute; top: 6%; animation: neonFlicker 2.5s infinite alternate; text-align: center; width: 100%;}
+        
+        .box { background: rgba(31, 40, 51, 0.85); padding: 10px 15px; border-radius: 12px; border: 1px solid #45a29e; width: 75%; max-width: 260px; text-align: center; margin-bottom: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px);}
+        .box h3 { margin: 0 0 6px 0; font-size: 14px; color: #45a29e; letter-spacing: 1px;}
+        
+        .room-code-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 4px; }
+        .room-label { font-size: 11px; color: #c5c6c7; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px;}
+        .code-box { display: flex; align-items: center; justify-content: space-between; background: #0b0c10; border: 1px solid #ff9f1c; border-radius: 8px; padding: 5px 12px; width: 85%; box-shadow: 0 0 10px rgba(255, 159, 28, 0.2); }
+        #my-id-display { font-size: 18px; font-weight: bold; color: #ff9f1c; letter-spacing: 2px; margin:0;}
+        
+        .action-btns { display: flex; gap: 8px; }
+        .icon-btn-small { background: transparent; border: none; font-size: 16px; cursor: pointer; padding: 0; margin: 0; box-shadow: none; width: auto; transition: transform 0.2s; }
+        .icon-btn-small:hover { transform: scale(1.2); background: transparent;}
+
+        input[type="text"] { width: 85%; padding: 7px; font-size: 15px; text-align: center; background: #0b0c10; color: #66fcf1; border: 1px solid #45a29e; border-radius: 8px; font-family: inherit; margin-bottom: 6px; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;}
+        input[type="text"]:focus { outline: none; border-color: #66fcf1; box-shadow: 0 0 10px #66fcf1;}
+        
+        button { padding: 9px 15px; font-size: 14px; font-weight: bold; background: #1f2833; color: #66fcf1; border: 2px solid #66fcf1; border-radius: 8px; cursor: pointer; box-shadow: 0 0 10px rgba(102,252,241,0.3); transition: 0.2s; width: 85%; max-width: 280px; margin-bottom: 6px; text-transform: uppercase;}
+        button:hover { background: rgba(102, 252, 241, 0.2); box-shadow: 0 0 15px #66fcf1;}
         button:active { background: #66fcf1; color: #0b0c10; }
-        .btn-orange { border-color: #ff9f1c; color: #ff9f1c; box-shadow: 0 0 10px #ff9f1c; }
+
+        @media (min-width: 768px) {
+            #mp-lobby h1 { font-size: 46px; top: 5%; }
+            #lobby-content { margin-top: 150px; }
+            .box { width: 50%; max-width: 440px; padding: 15px 25px; margin-bottom: 15px; }
+            .box h3 { font-size: 18px; margin-bottom: 10px; }
+            .room-label { font-size: 13px; }
+            .code-box { padding: 8px 18px; width: 88%; }
+            #my-id-display { font-size: 24px; letter-spacing: 4px; }
+            input[type="text"] { width: 88%; padding: 11px; font-size: 18px; margin-bottom: 10px; }
+            button { padding: 13px 24px; font-size: 16px; width: 88%; max-width: 400px; margin-bottom: 10px; }
+        }
+        
+        .btn-orange { border-color: #ff9f1c; color: #ff9f1c; box-shadow: 0 0 10px rgba(255,159,28,0.3); }
+        .btn-orange:hover { background: rgba(255, 159, 28, 0.2); box-shadow: 0 0 15px #ff9f1c;}
         .btn-orange:active { background: #ff9f1c; color: #0b0c10; }
-        .btn-green { border-color: #2ecc71; color: #2ecc71; box-shadow: 0 0 10px #2ecc71; margin-top: 10px;}
+        
+        .btn-green { border-color: #2ecc71; color: #2ecc71; box-shadow: 0 0 10px rgba(46,204,113,0.3); margin-top: 4px;}
+        .btn-green:hover { background: rgba(46, 204, 113, 0.2); box-shadow: 0 0 15px #2ecc71;}
         .btn-green:active { background: #2ecc71; color: #0b0c10; }
 
-        #top-right-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; z-index: 15; }
+        .btn-gray { border-color: #c5c6c7; color: #c5c6c7; box-shadow: none; margin-top: 4px;}
+        .btn-gray:hover { background: rgba(197, 198, 199, 0.2); box-shadow: 0 0 10px #c5c6c7;}
+        .btn-gray:active { background: #c5c6c7; color: #0b0c10; }
+
+        #top-right-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; z-index: 15; display:none;}
         .icon-btn { font-size: 28px; cursor: pointer; transition: transform 0.2s, filter 0.2s; text-shadow: 0 0 10px #66fcf1; user-select: none; background: rgba(11, 12, 16, 0.6); border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; border: 1px solid #45a29e; }
         .gyro-active { filter: hue-rotate(90deg) brightness(1.5); border-color: #2ecc71; }
         
@@ -40,51 +77,61 @@
         
         #toast-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 26px; font-weight: bold; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30; text-align: center; width: 100%;}
 
-        /* Giao diện Bảng Xếp Hạng */
-        #leaderboard-modal {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(11, 12, 16, 0.98); border: 2px solid #2ecc71; border-radius: 12px;
-            padding: 20px; width: 85%; max-width: 350px; z-index: 50; display: none;
-            box-shadow: 0 0 25px rgba(46, 204, 113, 0.5); text-align: center; max-height: 80vh; overflow-y: auto;
-        }
-        #leaderboard-modal h2 { color: #2ecc71; text-shadow: 0 0 10px #2ecc71; margin-top: 0; }
-        .lb-entry { display: flex; justify-content: space-between; padding: 10px 5px; border-bottom: 1px solid #1f2833; font-size: 18px;}
-        .lb-rank { color: #ff9f1c; font-weight: bold; width: 30px; text-align: left;}
+        #leaderboard-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(11, 12, 16, 0.98); border: 2px solid #2ecc71; border-radius: 12px; padding: 25px 20px; width: 85%; max-width: 380px; z-index: 50; display: none; box-shadow: 0 0 30px rgba(46, 204, 113, 0.6); text-align: center; max-height: 80vh; overflow-y: auto; pointer-events: auto;}
+        #leaderboard-modal h2 { color: #2ecc71; text-shadow: 0 0 10px #2ecc71; margin-top: 0; font-size: 28px; letter-spacing: 2px;}
+        .lb-entry { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid #1f2833; font-size: 18px;}
+        .lb-rank { color: #ff9f1c; font-weight: bold; width: 35px; text-align: left;}
         .lb-name { color: #66fcf1; flex-grow: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
         .lb-score { color: #2ecc71; font-weight: bold; }
         .lb-loading { color: #c5c6c7; font-style: italic; margin: 20px 0; }
+
+        .footer-credit { position: absolute; bottom: 15px; width: 100%; text-align: center; font-size: 14px; color: #45a29e; letter-spacing: 3px; font-weight: bold; text-shadow: 0 0 5px rgba(69, 162, 158, 0.5); pointer-events: none; }
     </style>
 </head>
 <body>
     <div id="mp-lobby">
         <h1>NEON JUMPER</h1>
-        <p>Hệ thống Rank Google Sheets</p>
         
-        <div class="box">
-            <h3>Hồ Sơ Của Bạn</h3>
-            <input type="text" id="player-name-input" placeholder="NHẬP TÊN CỦA BẠN" maxlength="12">
-            <p style="margin: 0; color: #f72585; font-size: 16px; font-weight: bold;">🏆 Kỷ Lục: <span id="lobby-highscore">0</span></p>
+        <div id="lobby-content">
+            <div class="box" id="profile-box">
+                <h3>Hồ Sơ Của Bạn</h3>
+                <input type="text" id="player-name-input" placeholder="NHẬP TÊN CỦA BẠN" maxlength="12">
+                <p style="margin: 0; color: #f72585; font-size: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(247,37,133,0.5);">🏆 Kỷ Lục: <span id="lobby-highscore">0</span></p>
+            </div>
+
+            <div class="box">
+                <h3>Vào Phòng Bạn Bè</h3>
+                
+                <div class="room-code-container">
+                    <span class="room-label">Mã Của Cậu Chủ:</span>
+                    <div class="code-box">
+                        <span id="my-id-display">ĐANG TẠO...</span>
+                        <div class="action-btns">
+                            <button id="refresh-btn" class="icon-btn-small" title="Lấy Mã Mới">🔄</button>
+                            <button id="copy-btn" class="icon-btn-small" title="Sao chép">📋</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="width: 100%; height: 1px; background: rgba(102, 252, 241, 0.2); margin: 8px 0;"></div>
+                
+                <input type="text" id="peer-id-input" placeholder="NHẬP MÃ BẠN BÈ" maxlength="6">
+                <button id="connect-btn" class="btn-orange">Vào Phòng & Chơi</button>
+            </div>
+            
+            <button id="solo-btn" class="btn-gray">Chơi 1 Mình</button>
+            <button id="show-lb-btn" class="btn-green">📊 TOP 10</button>
         </div>
 
-        <div class="box">
-            <h3>Vào Phòng Bạn Bè</h3>
-            <div id="my-id-display" style="font-size: 16px; color:#45a29e; margin-bottom: 5px;">Mã của bạn: Đang tạo... <span id="copy-btn" style="cursor:pointer; color:#fff;">📋 Cóp chép</span></div>
-            <input type="text" id="peer-id-input" placeholder="NHẬP MÃ BẠN BÈ" maxlength="6">
-            <button id="connect-btn" class="btn-orange">Vào Phòng & Chơi</button>
-        </div>
-        
-        <button id="solo-btn" style="width: 80%; max-width: 320px; border-color: #c5c6c7; color: #c5c6c7; box-shadow: none;">Chơi 1 Mình</button>
-        
-        <button id="show-lb-btn" class="btn-green" style="width: 80%; max-width: 320px;">📊 BẢNG XẾP HẠNG TOÀN CẦU</button>
+        <div class="footer-credit">Bởi : P&T</div>
     </div>
 
-    <!-- KHUNG BẢNG XẾP HẠNG -->
     <div id="leaderboard-modal">
-        <h2>TOP 10 GOOGLE SHEETS</h2>
+        <h2>TOP 10</h2>
         <div id="lb-content">
             <div class="lb-loading">Đang tải dữ liệu...</div>
         </div>
-        <button id="close-lb-btn" style="margin-top: 20px;">Đóng</button>
+        <button id="close-lb-btn" style="margin-top: 20px;">Đóng Bảng</button>
     </div>
 
     <div id="ui-layer">
@@ -100,137 +147,177 @@
     </div>
 
     <div id="game-over">
-        <h1 id="go-title">ĐỘI TRUYỆT DIỆT</h1>
+        <h1 id="go-title">VUI LÀ CHÍNH</h1>
         <p style="font-size: 20px;">Thành tích lượt này: <span id="final-score">0</span></p>
-        <p style="font-size: 18px; color: #f72585; font-weight:bold; margin-bottom: 20px;">🏆 Kỷ Lục Cá Nhân: <span id="go-highscore">0</span></p>
+        <p style="font-size: 18px; color: #f72585; font-weight:bold; margin-bottom: 25px; text-shadow: 0 0 10px rgba(247,37,133,0.5);">🏆 Kỷ Lục Cá Nhân: <span id="go-highscore">0</span></p>
         <button id="restart-btn" class="btn-orange" style="width: auto;">Chơi Lại Cùng Nhau</button>
+        <button id="home-btn" class="btn-gray" style="width: auto;">Về Sảnh Chờ</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
     <script>
+        const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+        // --- CHIỀU RỘNG THANH BẬC NHẠY THÍCH ỨNG (PC KÉO DÀI 40%, MOBILE THU NGẮN 40%) ---
+        const basePlatformW = 95;
+        const PLATFORM_W = window.innerWidth >= 768 ? basePlatformW * 1.4 : basePlatformW * 0.6;
+
+        // --- HOẠT ẢNH LOBBY ---
+        let lobbyAnimId;
+        let isLobby = true;
+        let lobbyPlayer = {
+            x: canvas.width / 2 - 40, y: canvas.height * 0.22, 
+            baseY: canvas.height * 0.22,
+            w: 30, h: 30, angle: 0,
+            vy: -7, jumpPower: 7, gravity: 0.2, 
+            dir: 1 
+        };
+
+        let lobbyFriend = { w: 30, h: 30, angle: 0 };
+
+        function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false) {
+            ctx.save(); 
+            ctx.translate(x, y); ctx.rotate(angle); 
+            ctx.fillStyle = colorStr; ctx.shadowBlur = 20; ctx.shadowColor = colorStr; ctx.fillRect(-w / 2, -h / 2, w, h);
+            ctx.fillStyle = '#0b0c10'; ctx.shadowBlur = 0; ctx.fillRect(-w / 2 + 6, -h / 2 + 6, w - 12, 6);
+            
+            let hOffset;
+            if (isFriend) {
+                hOffset = Math.sin(Date.now() / 150) * 8 - 5; 
+            } else {
+                hOffset = -vy * 1.5; if (hOffset < -18) hOffset = -18; if (hOffset > 10) hOffset = 10;
+            }
+
+            ctx.fillStyle = '#45a29e'; ctx.fillRect(-w / 2 - 12, hOffset - 6, 8, 12); ctx.fillRect(w / 2 + 4, hOffset - 6, 8, 12);
+            ctx.restore();
+        }
+
+        function lobbyLoop() {
+            if (!isLobby) return;
+            ctx.fillStyle = 'rgba(11, 12, 16, 0.4)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            lobbyPlayer.vy += lobbyPlayer.gravity;
+            lobbyPlayer.y += lobbyPlayer.vy;
+            lobbyPlayer.x += 1.2 * lobbyPlayer.dir; 
+            lobbyPlayer.angle += 0.05 * lobbyPlayer.dir;
+
+            if (lobbyPlayer.y > lobbyPlayer.baseY + 50) {
+                lobbyPlayer.y = lobbyPlayer.baseY + 50;
+                lobbyPlayer.vy = -lobbyPlayer.jumpPower;
+                lobbyPlayer.angle = 0; 
+                if (lobbyPlayer.x > canvas.width / 2 + 20) lobbyPlayer.dir = -1;
+                if (lobbyPlayer.x < canvas.width / 2 - 80) lobbyPlayer.dir = 1;
+            }
+
+            const profileBox = document.getElementById('profile-box');
+            if (profileBox) {
+                const rect = profileBox.getBoundingClientRect();
+                lobbyFriend.x = rect.right - 28; 
+                lobbyFriend.y = rect.top - 20;    
+            }
+            lobbyFriend.angle = Math.sin(Date.now() / 300) * 0.1;
+
+            drawEntityRaw(ctx, lobbyPlayer.x, lobbyPlayer.y, lobbyPlayer.w, lobbyPlayer.h, lobbyPlayer.angle, lobbyPlayer.vy, '#66fcf1', false);
+            drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.w, lobbyFriend.h, lobbyFriend.angle, 0, '#ff9f1c', true);
+            
+            lobbyAnimId = requestAnimationFrame(lobbyLoop);
+        }
+        lobbyLoop();
+
         // ==========================================
-        // CẤU HÌNH GOOGLE SHEETS API CỦA CẬU CHỦ
+        // CẤU HÌNH GOOGLE SHEETS API
         // ==========================================
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxZrYN0690PqOrQddeOEsjoR9xvT-RAm__pKJ_sznSlKWKyoeyR9-yrnx4ivAxgS6BDSw/exec";
 
-        // Hàm Gửi Điểm lên Google Sheets (Chỉ gửi nếu có URL và điểm > 0)
         function submitScore(name, score) {
             if (!GOOGLE_SHEET_URL || score <= 0) return;
-            
-            // Nối dữ liệu vào link URL dưới dạng query parameters
             let safeName = encodeURIComponent(name);
             let fetchUrl = `${GOOGLE_SHEET_URL}?action=add&name=${safeName}&score=${score}`;
-            
-            // Sử dụng "no-cors" mode vì script của Google đôi khi chặt chẽ về CORS
-            fetch(fetchUrl, { mode: 'no-cors' })
-                .then(res => console.log("Đã gửi lệnh lưu điểm vào Google Sheets!"))
-                .catch(err => console.log("Lỗi gửi điểm: ", err));
+            fetch(fetchUrl, { mode: 'no-cors' }).then(res => console.log("Đã gửi điểm")).catch(err => console.log(err));
         }
 
-        // Hàm Tải Bảng Xếp Hạng từ Google Sheets
         function fetchLeaderboard() {
             const lbContent = document.getElementById('lb-content');
-            
-            if (!GOOGLE_SHEET_URL) {
-                lbContent.innerHTML = `<div class="lb-loading" style="color:#f72585;">Chưa cấu hình Link Google Sheets!</div>`;
-                return;
-            }
-
+            if (!GOOGLE_SHEET_URL) { lbContent.innerHTML = `<div class="lb-loading" style="color:#f72585;">Chưa cấu hình Link Google Sheets!</div>`; return; }
             lbContent.innerHTML = `<div class="lb-loading">Đang đọc dữ liệu từ Sheets...</div>`;
             
             fetch(`${GOOGLE_SHEET_URL}?action=get`)
                 .then(response => response.json())
                 .then(entries => {
                     lbContent.innerHTML = '';
-                    
-                    if (!entries || entries.length === 0) {
-                        lbContent.innerHTML = `<div class="lb-loading">Bảng xếp hạng đang trống!</div>`;
-                        return;
-                    }
-
+                    if (!entries || entries.length === 0) { lbContent.innerHTML = `<div class="lb-loading">Bảng xếp hạng trống!</div>`; return; }
                     entries.forEach((entry, index) => {
-                        let row = document.createElement('div');
-                        row.className = 'lb-entry';
-                        row.innerHTML = `
-                            <div class="lb-rank">#${index + 1}</div>
-                            <div class="lb-name">${entry.name}</div>
-                            <div class="lb-score">${entry.score}</div>
-                        `;
+                        let row = document.createElement('div'); row.className = 'lb-entry';
+                        row.innerHTML = `<div class="lb-rank">#${index + 1}</div><div class="lb-name">${entry.name}</div><div class="lb-score">${entry.score}</div>`;
                         lbContent.appendChild(row);
                     });
                 })
-                .catch(err => {
-                    lbContent.innerHTML = `<div class="lb-loading" style="color:#f72585;">Lỗi kết nối máy chủ Google!</div>`;
-                });
+                .catch(err => { lbContent.innerHTML = `<div class="lb-loading" style="color:#f72585;">Lỗi kết nối máy chủ Google!</div>`; });
         }
 
-        document.getElementById('show-lb-btn').onclick = () => {
-            document.getElementById('leaderboard-modal').style.display = 'block';
-            fetchLeaderboard();
-        };
-        document.getElementById('close-lb-btn').onclick = () => {
-            document.getElementById('leaderboard-modal').style.display = 'none';
-        };
+        document.getElementById('show-lb-btn').onclick = () => { document.getElementById('leaderboard-modal').style.display = 'block'; fetchLeaderboard(); };
+        document.getElementById('close-lb-btn').onclick = () => { document.getElementById('leaderboard-modal').style.display = 'none'; };
 
-        // --- HỆ THỐNG LƯU TRỮ LOCAL STORAGE ---
+        document.getElementById('home-btn').onclick = () => { window.location.reload(); };
+
         let myName = localStorage.getItem('neonJumperName') || '';
         let myHighScore = parseInt(localStorage.getItem('neonJumperHighScore')) || 0;
-        
         document.getElementById('player-name-input').value = myName;
         document.getElementById('lobby-highscore').innerText = myHighScore;
 
         function saveProfile() {
             let n = document.getElementById('player-name-input').value.trim();
-            myName = n ? n : 'Người Chơi';
-            localStorage.setItem('neonJumperName', myName);
+            myName = n ? n : 'Người Chơi'; localStorage.setItem('neonJumperName', myName);
             document.getElementById('my-ingame-name').innerText = myName;
         }
 
         // --- MẠNG P2P ---
         const generateId = () => Math.random().toString(36).substring(2, 8).toUpperCase();
-        let myPeerId = generateId();
-        const peer = new Peer(myPeerId); 
+        let myPeerId = generateId(); 
+        let peer = new Peer(myPeerId); 
         let conn = null, opponentData = null; 
         let oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0 }; 
 
-        peer.on('open', (id) => { document.getElementById('my-id-display').innerHTML = `Mã của bạn: <strong style="color:#fff;">${id}</strong> <span id="copy-btn" style="cursor:pointer; font-size:14px;">📋 Cóp chép</span>`; 
-            document.getElementById('copy-btn').onclick = () => { navigator.clipboard.writeText(id); alert("Đã sao chép mã phòng!"); };
-        });
-        peer.on('error', (err) => { if(err.type === 'unavailable-id') { window.location.reload(); } });
-        peer.on('connection', (connection) => { conn = connection; setupConnection(); });
+        function initPeerEvents(p) {
+            p.on('open', (id) => { document.getElementById('my-id-display').innerText = id; });
+            p.on('error', (err) => { if(err.type === 'unavailable-id') { alert("Lỗi mạng, hãy thử lấy mã mới!"); } });
+            p.on('connection', (connection) => { conn = connection; setupConnection(); });
+        }
+        initPeerEvents(peer);
 
+        document.getElementById('copy-btn').onclick = () => { navigator.clipboard.writeText(myPeerId); showToast("✅ Đã sao chép mã phòng!", "#2ecc71"); };
+        
+        document.getElementById('refresh-btn').onclick = () => {
+            document.getElementById('my-id-display').innerText = "ĐANG TẠO...";
+            peer.destroy();
+            setTimeout(() => {
+                myPeerId = generateId();
+                peer = new Peer(myPeerId);
+                initPeerEvents(peer);
+                showToast("🔄 Đã lấy mã mới!", "#66fcf1");
+            }, 500);
+        };
+
+        let audioContext, analyser, microphone, dataArray, micPermissionGranted = false;
         async function requestMic() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                microphone = audioContext.createMediaStreamSource(stream);
-                microphone.connect(analyser);
-                analyser.fftSize = 256;
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser = audioContext.createAnalyser(); microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser); analyser.fftSize = 256; dataArray = new Uint8Array(analyser.frequencyBinCount);
                 micPermissionGranted = true;
-            } catch (err) {
-                console.log("Không có quyền Mic");
-                micPermissionGranted = false;
-            }
+            } catch (err) { micPermissionGranted = false; }
         }
 
         document.getElementById('connect-btn').onclick = async () => {
-            saveProfile(); 
-            let targetId = document.getElementById('peer-id-input').value.toUpperCase().trim();
-            if(targetId) {
-                await requestMic();
-                document.getElementById('connect-btn').innerText = "Đang kết nối...";
-                conn = peer.connect(targetId);
-                setupConnection(); 
-                conn.on('open', () => { document.getElementById('connect-btn').innerText = "Đã tìm thấy!"; conn.send({ type: 'ready' }); });
-            }
+            saveProfile(); let targetId = document.getElementById('peer-id-input').value.toUpperCase().trim();
+            if(targetId) { await requestMic(); document.getElementById('connect-btn').innerText = "Đang kết nối..."; conn = peer.connect(targetId); setupConnection(); conn.on('open', () => { document.getElementById('connect-btn').innerText = "Đã tìm thấy!"; conn.send({ type: 'ready' }); }); }
         };
 
-        document.getElementById('solo-btn').onclick = async () => { 
-            saveProfile(); await requestMic(); startGame(Math.random()); 
-        };
+        document.getElementById('solo-btn').onclick = async () => { saveProfile(); await requestMic(); startGame(Math.random()); };
 
         function showToast(text, color) {
             const toast = document.getElementById('toast-msg');
@@ -241,20 +328,10 @@
 
         function setupConnection() {
             conn.on('data', (data) => {
-                if (data.type === 'ready') {
-                    let seed = Math.floor(Math.random() * 99999);
-                    conn.send({ type: 'start', seed: seed }); startGame(seed);
-                } 
+                if (data.type === 'ready') { let seed = Math.floor(Math.random() * 99999); conn.send({ type: 'start', seed: seed }); startGame(seed); } 
                 else if (data.type === 'start') { startGame(data.seed); }
-                else if (data.type === 'update') {
-                    opponentData = data.player; 
-                    document.getElementById('opp-name').innerText = opponentData.name || 'Đồng đội';
-                    document.getElementById('opp-score').innerText = opponentData.score;
-                }
-                else if (data.type === 'revive') {
-                    player.isDead = false; player.vy = -baseJump * 1.5; player.x = oppRender.x; player.y = oppRender.y - 150; 
-                    showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585");
-                }
+                else if (data.type === 'update') { opponentData = data.player; document.getElementById('opp-name').innerText = opponentData.name || 'Đồng đội'; document.getElementById('opp-score').innerText = opponentData.score; }
+                else if (data.type === 'revive') { player.isDead = false; player.vy = -baseJump * 1.5; player.x = oppRender.x; player.y = oppRender.y - 150; showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585"); }
                 else if (data.type === 'slow') { slowTime = 300; }
             });
             conn.on('close', () => { alert("Đồng đội đã ngắt kết nối!"); window.location.reload(); });
@@ -267,18 +344,17 @@
             if (conn && conn.open) conn.send({ type: 'start', seed: seed }); startGame(seed);
         });
 
-        const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-
-        const gravity = 0.3; const baseJump = 11; const PLATFORM_W = 95; const PLATFORM_H = 12; const MIN_JUMP = 7.5;        
+        const gravity = 0.3; const baseJump = 11; const PLATFORM_H = 12; const MIN_JUMP = 7.5;        
         let player, platforms, score, isGameOver, gameLoopId, useGyro = false, gyroGamma = 0, cameraOffset = 0; 
-        let slowTime = 0, particles = [], audioContext, analyser, microphone, dataArray, micPermissionGranted = false, micTimeRemaining = 0; 
+        let slowTime = 0, particles = [], micTimeRemaining = 0; 
 
         function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
         
         function startGame(seed) {
+            isLobby = false; cancelAnimationFrame(lobbyAnimId);
             document.getElementById('mp-lobby').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'block'; document.getElementById('top-right-controls').style.display = 'flex';
             if(conn && conn.open) document.getElementById('opp-score-container').style.display = 'block';
             initGame(seed);
         }
@@ -325,30 +401,19 @@
 
         function checkEvol() {
             let expectedLevel = Math.floor(score / 20);
-            let maxH = 90; 
-            let theoreticalH = 30 + expectedLevel * 15;
-            let oldStage = player.colorStage; 
+            let maxH = 90; let theoreticalH = 30 + expectedLevel * 15; let oldStage = player.colorStage; 
 
             if (theoreticalH <= maxH) { player.h = theoreticalH; player.colorStage = 0; } 
             else { player.h = maxH; let excessEvolutions = Math.floor((theoreticalH - maxH) / 15); player.colorStage = excessEvolutions; }
 
             if (player.colorStage > oldStage && player.colorStage > 0) {
-                let newColor = getPlayerColor(player.colorStage);
-                showToast("✨ TA BIẾN HÌNH ĐÂY! ✨", newColor);
-                spawnExplosion(player.x + 15, player.y + player.h / 2, newColor); 
+                let newColor = getPlayerColor(player.colorStage); showToast("✨ TA BIẾN HÌNH ĐÂY! ✨", newColor); spawnExplosion(player.x + 15, player.y + player.h / 2, newColor); 
             }
-
-            player.jumpPower = baseJump - (expectedLevel * 0.35);
-            if(player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP;
+            player.jumpPower = baseJump - (expectedLevel * 0.35); if(player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP;
             document.getElementById('score').innerText = score;
         }
 
-        function getPlayerColor(stage) {
-            if (stage <= 0) return '#66fcf1'; 
-            if (stage === 1) return '#00ff00'; 
-            if (stage === 2) return '#fee440'; 
-            return `hsl(${Date.now() % 360}, 100%, 50%)`; 
-        }
+        function getPlayerColor(stage) { if (stage <= 0) return '#66fcf1'; if (stage === 1) return '#00ff00'; if (stage === 2) return '#fee440'; return `hsl(${Date.now() % 360}, 100%, 50%)`; }
 
         function loop() {
             if (isGameOver) return;
@@ -362,12 +427,10 @@
             }
 
             if (opponentData) {
-                opponentData.screenY = opponentData.worldY + cameraOffset;
-                oppRender.x += (opponentData.x - oppRender.x) * 0.5;
+                opponentData.screenY = opponentData.worldY + cameraOffset; oppRender.x += (opponentData.x - oppRender.x) * 0.5;
                 if (opponentData.vy < -5 || Math.abs(opponentData.screenY - oppRender.y) > 30) { oppRender.y = opponentData.screenY; } else { oppRender.y += (opponentData.screenY - oppRender.y) * 0.6; }
                 oppRender.squash += (opponentData.squash - oppRender.squash) * 0.5; oppRender.angle += (opponentData.angle - oppRender.angle) * 0.5;
                 oppRender.vy = opponentData.vy; oppRender.isDead = opponentData.isDead; oppRender.h = opponentData.h; 
-                
                 if (opponentData.colorStage > oppRender.colorStage) { spawnExplosion(oppRender.x + 15, oppRender.y + oppRender.h / 2, getPlayerColor(opponentData.colorStage)); }
                 oppRender.colorStage = opponentData.colorStage;
             }
@@ -385,22 +448,16 @@
                     if (player.flipAngle > 0) { let spinSpeed = 0.25; player.angle += spinSpeed * player.flipDir; player.flipAngle -= spinSpeed; if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; } }
 
                     if (player.y > canvas.height) {
-                        player.isDead = true; player.h = 30; player.colorStage = 0; player.jumpPower = baseJump;
-                        player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); 
+                        player.isDead = true; player.h = 30; player.colorStage = 0; player.jumpPower = baseJump; player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); 
                     }
                 }
             } else {
-                if (opponentData && !opponentData.isDead) {
-                    let orbitX = oppRender.x + Math.sin(Date.now() / 300) * 50; let orbitY = oppRender.y - 70 + Math.cos(Date.now() / 300) * 20;
-                    player.x += (orbitX - player.x) * 0.1; player.y += (orbitY - player.y) * 0.1;
-                }
+                if (opponentData && !opponentData.isDead) { let orbitX = oppRender.x + Math.sin(Date.now() / 300) * 50; let orbitY = oppRender.y - 70 + Math.cos(Date.now() / 300) * 20; player.x += (orbitX - player.x) * 0.1; player.y += (orbitY - player.y) * 0.1; }
             }
 
             for (let i = particles.length - 1; i >= 0; i--) { let pt = particles[i]; pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.04; if (pt.life <= 0) particles.splice(i, 1); }
 
-            if (conn && conn.open) {
-                conn.send({ type: 'update', player: { name: myName, x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score, h: player.h, colorStage: player.colorStage } });
-            }
+            if (conn && conn.open) { conn.send({ type: 'update', player: { name: myName, x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score, h: player.h, colorStage: player.colorStage } }); }
 
             if (player.isDead && (!conn || !conn.open || (opponentData && opponentData.isDead))) { gameOver(); return; }
 
@@ -445,13 +502,7 @@
                 return;
             }
             let colorMain = isOpponent ? getPlayerColor(entity.colorStage) : getPlayerColor(entity.colorStage);
-            ctx.save(); let w = 30; let h = entity.h || 30; let cx = entity.x + 15; let cy = entity.y + h / 2;
-            ctx.translate(cx, cy); ctx.rotate(entity.angle); ctx.scale(2 - entity.squash, entity.squash);
-            ctx.fillStyle = colorMain; ctx.shadowBlur = 20; ctx.shadowColor = colorMain; ctx.fillRect(-w / 2, -h / 2, w, h);
-            ctx.fillStyle = '#0b0c10'; ctx.shadowBlur = 0; ctx.fillRect(-w / 2 + 6, -h / 2 + 6, w - 12, 6);
-            let handOffset = -entity.vy * 1.5; if (handOffset < -18) handOffset = -18; if (handOffset > 10) handOffset = 10;
-            ctx.fillStyle = (entity.colorStage >= 3) ? colorMain : '#45a29e'; ctx.fillRect(-w / 2 - 12, handOffset - 6, 8, 12); ctx.fillRect(w / 2 + 4, handOffset - 6, 8, 12);
-            ctx.restore();
+            drawEntityRaw(ctx, entity.x + 15, entity.y + (entity.h || 30) / 2, 30, entity.h || 30, entity.angle, entity.vy, colorMain, false);
         }
 
         function drawRadar() {
@@ -501,21 +552,10 @@
         }
 
         function gameOver() {
-            isGameOver = true;
-            let finalScore = score;
-            
-            // LƯU KỶ LỤC & GỬI LÊN BẢNG XẾP HẠNG KHI CHẾT
-            if (score > myHighScore) {
-                myHighScore = score;
-                localStorage.setItem('neonJumperHighScore', myHighScore);
-                document.getElementById('lobby-highscore').innerText = myHighScore;
-                submitScore(myName, myHighScore); // GỬI LÊN GOOGLE SHEETS
-            }
-
+            isGameOver = true; let finalScore = score;
+            if (score > myHighScore) { myHighScore = score; localStorage.setItem('neonJumperHighScore', myHighScore); document.getElementById('lobby-highscore').innerText = myHighScore; submitScore(myName, myHighScore); }
             if (opponentData && opponentData.score > score) finalScore = opponentData.score;
-            document.getElementById('final-score').innerText = finalScore;
-            document.getElementById('go-highscore').innerText = myHighScore;
-            document.getElementById('game-over').style.display = 'flex';
+            document.getElementById('final-score').innerText = finalScore; document.getElementById('go-highscore').innerText = myHighScore; document.getElementById('game-over').style.display = 'flex';
         }
 
         function handleMovement(xClient) { if(!isGameOver && !useGyro && !player.isDead) player.targetX = xClient - player.w / 2; }
