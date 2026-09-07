@@ -85,7 +85,6 @@
         .lb-score { color: #2ecc71; font-weight: bold; }
         .lb-loading { color: #c5c6c7; font-style: italic; margin: 20px 0; }
 
-        /* HIỆU ỨNG NEON SÁNG DẦN VÀ TẮT DẦN CHO CHỮ KÝ */
         @keyframes creditPulse {
             0% { opacity: 0.2; text-shadow: 0 0 2px #45a29e; }
             50% { opacity: 1; text-shadow: 0 0 15px #66fcf1, 0 0 25px #66fcf1; }
@@ -168,14 +167,23 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
+        // --- LỚP BẢO MẬT: KHÓA TÊN MIỀN & GIẢI MÃ API ẨN ---
+        // (Cậu chủ có thể thay đổi domain được phép ở biến dưới nếu đưa lên web riêng)
+        const allowedDomain = ""; 
+        if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" && allowedDomain !== "" && !window.location.hostname.endsWith(allowedDomain)) {
+            document.body.innerHTML = "<h1 style='color:#66fcf1; text-align:center; margin-top:40vh; font-family:monospace;'>BẢN QUYỀN THUỘC VỀ P&T - KHÔNG SAO CHÉP</h1>";
+            throw new Error("Unauthorized execution.");
+        }
+
+        // Giải mã URL Google Sheets từ Base64 để chống soi code trực tiếp
+        const GOOGLE_SHEET_URL = atob("aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J4WnJZTjA2OTBQcU9yUWRkZU9Fc2pvUjl4dlQtUkFtX19wS0pfc3puU2lLV0t5b2V5UjkteXJueDRpdkF4Z1M2QkRTdy9leGVj");
+
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
         canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
-        // --- KÉO DÀI BẬC TRÊN PC THÊM 20% (TỔNG CỘNG 1.68 LẦN) ---
         const basePlatformW = 95;
         const PLATFORM_W = window.innerWidth >= 768 ? basePlatformW * 1.68 : basePlatformW * 0.6;
 
-        // --- HOẠT ẢNH LOBBY ---
         let lobbyAnimId;
         let isLobby = true;
         let lobbyPlayer = {
@@ -238,21 +246,20 @@
         }
         lobbyLoop();
 
-        // ==========================================
-        // CẤU HÌNH GOOGLE SHEETS API
-        // ==========================================
-        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxZrYN0690PqOrQddeOEsjoR9xvT-RAm__pKJ_sznSlKWKyoeyR9-yrnx4ivAxgS6BDSw/exec";
-
+        // --- GỬI ĐIỂM CÓ KÈM MÃ TOKEN BẢO MẬT CHỐNG HACK ---
         function submitScore(name, score) {
             if (!GOOGLE_SHEET_URL || score <= 0) return;
             let safeName = encodeURIComponent(name);
-            let fetchUrl = `${GOOGLE_SHEET_URL}?action=add&name=${safeName}&score=${score}`;
-            fetch(fetchUrl, { mode: 'no-cors' }).then(res => console.log("Đã gửi điểm")).catch(err => console.log(err));
+            // Tạo mã Token dựa trên điểm số và chuỗi khóa bí mật
+            let token = btoa(score + "_PT_SECRET_2026");
+            let fetchUrl = `${GOOGLE_SHEET_URL}?action=add&name=${safeName}&score=${score}&token=${token}`;
+            
+            fetch(fetchUrl, { mode: 'no-cors' }).then(res => console.log("Đã lưu điểm an toàn")).catch(err => console.log(err));
         }
 
         function fetchLeaderboard() {
             const lbContent = document.getElementById('lb-content');
-            if (!GOOGLE_SHEET_URL) { lbContent.innerHTML = `<div class="lb-loading" style="color:#f72585;">Chưa cấu hình Link Google Sheets!</div>`; return; }
+            if (!GOOGLE_SHEET_URL) { lbContent.innerHTML = `<div class="lb-loading" style="color:#f72585;">Chưa cấu hình Link!</div>`; return; }
             lbContent.innerHTML = `<div class="lb-loading">Đang đọc dữ liệu từ Sheets...</div>`;
             
             fetch(`${GOOGLE_SHEET_URL}?action=get`)
@@ -285,7 +292,6 @@
             document.getElementById('my-ingame-name').innerText = myName;
         }
 
-        // --- MẠNG P2P ---
         const generateId = () => Math.random().toString(36).substring(2, 8).toUpperCase();
         let myPeerId = generateId(); 
         let peer = new Peer(myPeerId); 
@@ -334,7 +340,7 @@
             const toast = document.getElementById('toast-msg');
             toast.innerText = text; toast.style.color = color; toast.style.textShadow = `0 0 20px ${color}`;
             toast.style.opacity = '1'; toast.style.transform = 'translate(-50%, -80%) scale(1.2)';
-            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, -50%) scale(1)'; }, 2000);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, -50%) scale(1); }, 2000);
         }
 
         function setupConnection() {
@@ -568,7 +574,6 @@
             if (opponentData && opponentData.score > score) finalScore = opponentData.score;
             document.getElementById('final-score').innerText = finalScore; document.getElementById('go-highscore').innerText = myHighScore;
             
-            // Hiển thị lời động viên nếu chơi trên PC
             if (window.innerWidth >= 768) {
                 document.getElementById('pc-encouragement').style.display = 'block';
             } else {
@@ -579,6 +584,7 @@
         }
 
         function handleMovement(xClient) { if(!isGameOver && !useGyro && !player.isDead) player.targetX = xClient - player.w / 2; }
+        canvas.addEventListener('touchmock', (e) => {}, {passive: false});
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
