@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Jumper - Revive & Smooth Multiplayer</title>
+    <title>Neon Jumper - Seamless Multiplayer</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background: #0b0c10; color: #66fcf1; font-family: 'Courier New', Courier, monospace; touch-action: none; cursor: crosshair; }
@@ -33,7 +33,6 @@
         #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.9); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center; }
         #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7; color: #c5c6c7; margin-bottom: 10px;}
         
-        /* Hiệu ứng thông báo hồi sinh */
         #revive-toast { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #f72585; font-size: 30px; font-weight: bold; text-shadow: 0 0 20px #f72585; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30;}
     </style>
 </head>
@@ -70,7 +69,7 @@
     <div id="game-over">
         <h1 id="go-title">ĐỘI TRUYỆT DIỆT</h1>
         <p style="font-size: 20px;">Thành tích chung: <span id="final-score">0</span> bậc</p>
-        <button id="restart-btn" style="width: auto;">Rời Phòng</button>
+        <button id="restart-btn" class="btn-orange" style="width: auto;">Chơi Lại Cùng Nhau</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -82,7 +81,6 @@
         let conn = null;
         let opponentData = null; 
         
-        // Render mượt cho đối thủ
         let oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0 }; 
 
         peer.on('open', (id) => { document.getElementById('my-id-display').innerText = id; });
@@ -123,27 +121,38 @@
                     conn.send({ type: 'start', seed: seed });
                     startGame(seed);
                 } 
-                else if (data.type === 'start') startGame(data.seed);
+                else if (data.type === 'start') {
+                    // Lệnh Restart từ đồng đội
+                    startGame(data.seed);
+                }
                 else if (data.type === 'update') {
                     opponentData = data.player;
                     document.getElementById('opp-score').innerText = opponentData.score;
                 }
                 else if (data.type === 'revive') {
-                    // Nhận được lệnh hồi sinh từ đồng đội!
                     player.isDead = false;
-                    player.vy = -baseJump * 1.2; // Bật cực mạnh lên để xuất hiện ngầu hơn
-                    // Dịch chuyển đến chỗ đồng đội
+                    player.vy = -baseJump * 1.2; 
                     player.x = oppRender.x;
                     player.y = oppRender.y - 150; 
                     showReviveToast();
                 }
             });
-            conn.on('close', () => { alert("Đồng đội đã ngắt kết nối!"); });
+            conn.on('close', () => { alert("Đồng đội đã ngắt kết nối!"); window.location.reload(); });
             conn.on('error', () => { alert("Lỗi mạng!"); document.getElementById('connect-btn').innerText = "Vào Phòng & Chơi"; });
         }
 
         function LCG(seed) { return function() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; } }
         document.getElementById('solo-btn').onclick = () => { startGame(Math.random()); };
+
+        // Xử lý nút Chơi Lại Cùng Nhau
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            let seed = Math.floor(Math.random() * 99999);
+            // Gửi lệnh qua máy bạn bè để cùng reset
+            if (conn && conn.open) {
+                conn.send({ type: 'start', seed: seed });
+            }
+            startGame(seed);
+        });
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -155,17 +164,20 @@
 
         let player, platforms, score, isGameOver, gameLoopId;
         let useGyro = false, gyroGamma = 0; 
-        let cameraOffset = 0; // Biến siêu quan trọng để đồng bộ tọa độ tuyệt đối
+        let cameraOffset = 0; 
         
         function startGame(seed) {
             document.getElementById('mp-lobby').style.display = 'none';
+            document.getElementById('game-over').style.display = 'none';
             if(conn && conn.open) document.getElementById('opp-score-container').style.display = 'block';
             initGame(seed);
         }
 
         function initGame(seed) {
-            score = 0; isGameOver = false; opponentData = null; cameraOffset = 0;
-            document.getElementById('game-over').style.display = 'none';
+            score = 0; isGameOver = false; cameraOffset = 0;
+            // Xóa dữ liệu cũ của cả 2
+            opponentData = null; 
+            oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0 }; 
 
             player = { x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, w: 30, h: 30, vy: 0, jumpPower: baseJump, level: 0, squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1, isDead: false };
             platforms = [];
@@ -182,8 +194,6 @@
                 
                 let isMoving = rng() < 0.35 && i > 2;
                 let speed = isMoving ? (rng() > 0.5 ? 2.5 : -2.5) : 0;
-                
-                // Trái tim hồi sinh có 12% tỷ lệ xuất hiện (Chỉ xuất hiện sau bậc thứ 10)
                 let hasHeart = (rng() < 0.12) && i > 10;
 
                 platforms.push({ x: rng() * (canvas.width - PLATFORM_W), y: currentY, w: PLATFORM_W, h: PLATFORM_H, visited: false, dx: speed, hasRevive: hasHeart });
@@ -216,11 +226,8 @@
         function loop() {
             if (isGameOver) return;
 
-            // --- LÀM MƯỢT ĐỐI THỦ (INTERPOLATION) ---
             if (opponentData) {
-                // Đổi tọa độ tuyệt đối thế giới thành tọa độ màn hình hiện tại
                 opponentData.screenY = opponentData.worldY + cameraOffset;
-                
                 oppRender.x += (opponentData.x - oppRender.x) * 0.3;
                 oppRender.y += (opponentData.screenY - oppRender.y) * 0.3;
                 oppRender.squash += (opponentData.squash - oppRender.squash) * 0.3;
@@ -229,7 +236,6 @@
                 oppRender.isDead = opponentData.isDead;
             }
 
-            // --- CẬP NHẬT TRẠNG THÁI BẢN THÂN ---
             if (!player.isDead) {
                 if (useGyro) player.targetX = player.x + ((gyroGamma / 45) * 15);
                 player.x += (player.targetX - player.x) * (useGyro ? 0.8 : 0.4);
@@ -244,14 +250,9 @@
                     if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; }
                 }
 
-                // Xét rơi đài
-                if (player.y > canvas.height) {
-                    player.isDead = true;
-                }
+                if (player.y > canvas.height) player.isDead = true;
             } else {
-                // NẾU ĐÃ CHẾT -> Trở thành Đầu lâu bay quanh đồng đội
                 if (opponentData && !opponentData.isDead) {
-                    // Quỹ đạo bay lượn vòng tròn
                     let orbitX = oppRender.x + Math.sin(Date.now() / 300) * 50;
                     let orbitY = oppRender.y - 70 + Math.cos(Date.now() / 300) * 20;
                     player.x += (orbitX - player.x) * 0.1;
@@ -259,20 +260,14 @@
                 }
             }
 
-            // --- ĐỒNG BỘ DỮ LIỆU ---
             if (conn && conn.open) {
-                conn.send({ 
-                    type: 'update', 
-                    player: { x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score } 
-                });
+                conn.send({ type: 'update', player: { x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score } });
             }
 
-            // KẾT THÚC GAME KHI CẢ HAI CÙNG CHẾT
             if (player.isDead && (!conn || !conn.open || (opponentData && opponentData.isDead))) {
                 gameOver(); return;
             }
 
-            // --- XỬ LÝ BẬC THANG & VẬT PHẨM ---
             for (let p of platforms) {
                 if (p.dx !== 0) {
                     p.x += p.dx;
@@ -284,16 +279,14 @@
                     if (player.y + player.h >= p.y && player.y + player.h - player.vy <= p.y + p.h) {
                         if (player.x + player.w > p.x - 5 && player.x < p.x + p.w + 5) {
                             
-                            // Ăn vật phẩm hồi sinh nếu đồng đội đang chết
                             if (p.hasRevive) {
-                                p.hasRevive = false; // Xóa item
+                                p.hasRevive = false; 
                                 if (conn && conn.open && opponentData && opponentData.isDead) {
                                     conn.send({ type: 'revive' });
                                     showReviveToast();
                                 }
                             }
 
-                            // Bật nhảy
                             player.vy = -player.jumpPower; 
                             player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0;
                             player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
@@ -312,8 +305,6 @@
                 }
             }
 
-            // --- CAMERA LINH ĐỘNG ---
-            // Nếu chết, camera sẽ đi theo người còn sống
             let focusY = player.y;
             if (player.isDead && opponentData && !opponentData.isDead) {
                 focusY = oppRender.y;
@@ -322,7 +313,7 @@
             const cameraThreshold = canvas.height / 2;
             if (focusY < cameraThreshold) {
                 let camDiff = cameraThreshold - focusY;
-                cameraOffset += camDiff; // Lưu lại mức cuộn màn hình
+                cameraOffset += camDiff; 
                 platforms.forEach(p => p.y += camDiff);
                 player.y += camDiff;
                 oppRender.y += camDiff;
@@ -334,25 +325,17 @@
 
         function drawEntity(entity, colorMain, isOpponent = false) {
             if (entity.isDead) {
-                // VẼ ĐẦU LÂU NẾU CHẾT
-                ctx.font = "30px Arial";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#fff';
+                ctx.font = "30px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.shadowBlur = 15; ctx.shadowColor = '#fff';
                 ctx.fillText("💀", entity.x + 15, entity.y + 15);
-                ctx.shadowBlur = 0; // reset
+                ctx.shadowBlur = 0; 
                 return;
             }
-
             ctx.save(); 
-            let cx = entity.x + 15; let cy = entity.y + (isOpponent ? 15 : player.h / 2); // fix cho đối thủ vì không truyền h
+            let cx = entity.x + 15; let cy = entity.y + (isOpponent ? 15 : player.h / 2);
             let w = 30; let h = isOpponent ? 30 : player.h;
 
-            ctx.translate(cx, cy);
-            ctx.rotate(entity.angle);
-            ctx.scale(2 - entity.squash, entity.squash);
-
+            ctx.translate(cx, cy); ctx.rotate(entity.angle); ctx.scale(2 - entity.squash, entity.squash);
             ctx.fillStyle = colorMain; ctx.shadowBlur = 20; ctx.shadowColor = colorMain;
             ctx.fillRect(-w / 2, -h / 2, w, h);
             
@@ -367,33 +350,63 @@
             ctx.restore();
         }
 
+        // VẼ MŨI TÊN RADAR BÁO ĐỒNG ĐỘI NGOÀI MÀN HÌNH
+        function drawRadar() {
+            if (opponentData && !opponentData.isDead) {
+                let oppScreenX = oppRender.x + 15;
+                let oppScreenY = oppRender.y + 15;
+                
+                // Nếu đồng đội bay ra khỏi giới hạn màn hình
+                if (oppScreenY < 0 || oppScreenY > canvas.height) {
+                    ctx.save();
+                    ctx.fillStyle = '#ff9f1c';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ff9f1c';
+                    ctx.beginPath();
+                    
+                    if (oppScreenY < 0) {
+                        // Vẽ mũi tên chỉ lên
+                        ctx.moveTo(oppScreenX, 20);
+                        ctx.lineTo(oppScreenX - 12, 40);
+                        ctx.lineTo(oppScreenX + 12, 40);
+                        ctx.fill();
+                        ctx.font = "bold 12px Courier New"; ctx.textAlign = "center";
+                        ctx.fillText("ĐỒNG ĐỘI", oppScreenX, 55);
+                    } else {
+                        // Vẽ mũi tên chỉ xuống
+                        ctx.moveTo(oppScreenX, canvas.height - 20);
+                        ctx.lineTo(oppScreenX - 12, canvas.height - 40);
+                        ctx.lineTo(oppScreenX + 12, canvas.height - 40);
+                        ctx.fill();
+                        ctx.font = "bold 12px Courier New"; ctx.textAlign = "center";
+                        ctx.fillText("ĐỒNG ĐỘI", oppScreenX, canvas.height - 55);
+                    }
+                    ctx.restore();
+                }
+            }
+        }
+
         function draw() {
             ctx.fillStyle = '#0b0c10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             for (let p of platforms) {
                 if(p.y > canvas.height + 50 || p.y < -50) continue; 
                 
-                // Vẽ Bậc Thang
                 if (!p.visited) {
                     if (p.dx !== 0) { ctx.fillStyle = '#f72585'; ctx.shadowBlur = 15; ctx.shadowColor = '#f72585'; } 
                     else { ctx.fillStyle = '#45a29e'; ctx.shadowBlur = 15; ctx.shadowColor = '#66fcf1'; }
                 } else { ctx.fillStyle = '#1f2833'; ctx.shadowBlur = 0; }
                 ctx.fillRect(p.x, p.y, p.w, p.h);
 
-                // Vẽ Vật Phẩm Hồi Sinh 💖
                 if (p.hasRevive) {
-                    ctx.font = "24px Arial";
-                    ctx.textAlign = "center";
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#f72585';
-                    // Tạo hiệu ứng nảy nhẹ cho trái tim
+                    ctx.font = "24px Arial"; ctx.textAlign = "center";
+                    ctx.shadowBlur = 15; ctx.shadowColor = '#f72585';
                     let bounce = Math.sin(Date.now() / 200) * 5;
                     ctx.fillText("💖", p.x + p.w / 2, p.y - 15 + bounce);
                     ctx.shadowBlur = 0;
                 }
             }
 
-            // Luôn vẽ người sống đè lên hồn ma
             if (opponentData) {
                 if (opponentData.isDead) drawEntity(oppRender, '#ff9f1c', true);
             }
@@ -401,6 +414,8 @@
 
             if (opponentData && !opponentData.isDead) drawEntity(oppRender, '#ff9f1c', true);
             if (!player.isDead) drawEntity(player, '#66fcf1', false);
+
+            drawRadar(); // Gọi hàm vẽ radar
         }
 
         function gameOver() {
@@ -417,7 +432,6 @@
         canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
 
         window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
-        document.getElementById('restart-btn').addEventListener('click', () => { window.location.reload(); });
     </script>
 </body>
 </html>
