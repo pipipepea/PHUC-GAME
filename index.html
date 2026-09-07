@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Jumper - Ultimate Sync & Items</title>
+    <title>Neon Jumper - Multi-path & Mic Boost</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background: #0b0c10; color: #66fcf1; font-family: 'Courier New', Courier, monospace; touch-action: none; cursor: crosshair; }
@@ -33,13 +33,13 @@
         #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.9); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center; }
         #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7; color: #c5c6c7; margin-bottom: 10px;}
         
-        #revive-toast { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #f72585; font-size: 30px; font-weight: bold; text-shadow: 0 0 20px #f72585; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30;}
+        #toast-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 26px; font-weight: bold; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30; text-align: center; width: 100%;}
     </style>
 </head>
 <body>
     <div id="mp-lobby">
         <h1>NEON JUMPER</h1>
-        <p>Bản Siêu Mượt & Item Thu Nhỏ</p>
+        <p>Bản Đa Lộ Trình & Thổi Mic</p>
         
         <div class="box">
             <h3>Mã Phòng Của Bạn</h3>
@@ -60,9 +60,10 @@
         <div class="stat opponent-stat" id="opp-score-container" style="display:none;">Đồng đội: <span id="opp-score">0</span></div>
     </div>
     
-    <div id="revive-toast">💖 ĐÃ HỒI SINH! 💖</div>
+    <div id="toast-msg">THÔNG BÁO</div>
 
     <div id="top-right-controls">
+        <div class="icon-btn" id="mic-btn" title="Thổi để bay">🎤</div>
         <div class="icon-btn" id="gyro-btn" title="Bật Cảm Biến Nghiêng">📱</div>
     </div>
 
@@ -85,33 +86,27 @@
 
         peer.on('open', (id) => { document.getElementById('my-id-display').innerText = id; });
         peer.on('error', (err) => {
-            if(err.type === 'unavailable-id') { alert('Mã phòng bị trùng, máy sẽ tự tải lại...'); window.location.reload(); }
+            if(err.type === 'unavailable-id') { alert('Mã phòng bị trùng, tải lại...'); window.location.reload(); }
         });
         peer.on('connection', (connection) => { conn = connection; setupConnection(); });
 
         document.getElementById('copy-btn').onclick = () => { navigator.clipboard.writeText(myPeerId); document.getElementById('copy-btn').innerText = "✅ Đã cóp chép"; };
-
         document.getElementById('connect-btn').onclick = () => {
             let targetId = document.getElementById('peer-id-input').value.toUpperCase().trim();
             if(targetId) {
                 document.getElementById('connect-btn').innerText = "Đang kết nối...";
                 conn = peer.connect(targetId);
                 setupConnection(); 
-                conn.on('open', () => {
-                    document.getElementById('connect-btn').innerText = "Đã tìm thấy!";
-                    conn.send({ type: 'ready' });
-                });
+                conn.on('open', () => { document.getElementById('connect-btn').innerText = "Đã tìm thấy!"; conn.send({ type: 'ready' }); });
             }
         };
 
-        function showReviveToast() {
-            const toast = document.getElementById('revive-toast');
-            toast.style.opacity = '1';
-            toast.style.transform = 'translate(-50%, -80%) scale(1.2)';
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translate(-50%, -50%) scale(1)';
-            }, 1500);
+        function showToast(text, color) {
+            const toast = document.getElementById('toast-msg');
+            toast.innerText = text;
+            toast.style.color = color; toast.style.textShadow = `0 0 20px ${color}`;
+            toast.style.opacity = '1'; toast.style.transform = 'translate(-50%, -80%) scale(1.2)';
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, -50%) scale(1)'; }, 2000);
         }
 
         function setupConnection() {
@@ -127,12 +122,10 @@
                     document.getElementById('opp-score').innerText = opponentData.score;
                 }
                 else if (data.type === 'revive') {
-                    player.isDead = false;
-                    player.vy = -baseJump * 1.2; 
-                    player.x = oppRender.x;
-                    player.y = oppRender.y - 150; 
-                    showReviveToast();
+                    player.isDead = false; player.vy = -baseJump * 1.5; player.x = oppRender.x; player.y = oppRender.y - 150; 
+                    showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585");
                 }
+                else if (data.type === 'slow') { slowTime = 300; }
             });
             conn.on('close', () => { alert("Đồng đội đã ngắt kết nối!"); window.location.reload(); });
             conn.on('error', () => { alert("Lỗi mạng!"); document.getElementById('connect-btn').innerText = "Vào Phòng & Chơi"; });
@@ -158,18 +151,43 @@
         let useGyro = false, gyroGamma = 0; 
         let cameraOffset = 0; 
         
-        // --- HỆ THỐNG HIỆU ỨNG HẠT (PARTICLES) ---
+        let slowTime = 0;
         let particles = [];
+        
+        // --- CÀI ĐẶT MICROPHONE BOOST ---
+        let audioContext, analyser, microphone, dataArray;
+        let micActive = false;
+
+        document.getElementById('mic-btn').onclick = async () => {
+            if (micActive) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                micActive = true;
+                document.getElementById('mic-btn').classList.add('gyro-active');
+                showToast("🎤 Đã bật Phản Lực Khí!", "#fff");
+            } catch (err) {
+                alert("Lỗi: Hãy cho phép trình duyệt truy cập Micro, hoặc đảm bảo cậu chủ đang mở game qua link an toàn (HTTPS/CodePen).");
+            }
+        };
+
         function spawnExplosion(x, y, color) {
             for(let i = 0; i < 20; i++) {
-                particles.push({
-                    x: x, y: y,
-                    vx: (Math.random() - 0.5) * 15,
-                    vy: (Math.random() - 0.5) * 15,
-                    life: 1.0,
-                    color: color
-                });
+                particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15, life: 1.0, color: color });
             }
+        }
+
+        function spawnExhaust(x, y) {
+            particles.push({
+                x: x + (Math.random() * 20 - 10), y: y,
+                vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2,
+                life: 0.8, color: '#ffffff'
+            });
         }
         
         function startGame(seed) {
@@ -180,13 +198,13 @@
         }
 
         function initGame(seed) {
-            score = 0; isGameOver = false; cameraOffset = 0; particles = [];
+            score = 0; isGameOver = false; cameraOffset = 0; particles = []; slowTime = 0;
             opponentData = null; 
             oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, level: 0, h: 30 }; 
 
-            player = { x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, w: 30, h: 30, vy: 0, jumpPower: baseJump, level: 0, squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1, isDead: false };
+            player = { x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, w: 30, h: 30, vy: 0, jumpPower: baseJump, level: 0, squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1, isDead: false, webTarget: null };
             platforms = [];
-            platforms.push({ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0, hasRevive: false, hasShrink: false });
+            platforms.push({ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0, hasRevive: false, hasShrink: false, hasSnow: false, hasWeb: false });
             
             let rng = LCG(seed);
             let currentY = canvas.height - 100;
@@ -201,9 +219,25 @@
                 let speed = isMoving ? (rng() > 0.5 ? 2.5 : -2.5) : 0;
                 
                 let hasHeart = (rng() < 0.12) && i > 10;
-                let hasShrink = (rng() < 0.10) && !hasHeart && i > 5; // Item Xanh (10%)
+                let hasShrink = (rng() < 0.10) && !hasHeart && i > 5; 
+                let hasSnow = (rng() < 0.08) && !hasHeart && !hasShrink && i > 15;
+                let hasWeb = (rng() < 0.08) && !hasHeart && !hasShrink && !hasSnow && i > 20;
 
-                platforms.push({ x: rng() * (canvas.width - PLATFORM_W), y: currentY, w: PLATFORM_W, h: PLATFORM_H, visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink });
+                let p1X = rng() * (canvas.width - PLATFORM_W);
+                platforms.push({ 
+                    x: p1X, y: currentY, w: PLATFORM_W, h: PLATFORM_H, 
+                    visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink, hasSnow: hasSnow, hasWeb: hasWeb 
+                });
+
+                // TẠO LỘ TRÌNH PHỤ (70% CƠ HỘI SINH BẬC THANG THỨ 2 KẾ BÊN)
+                if (rng() < 0.7) {
+                    let p2X = (p1X + canvas.width / 2) % (canvas.width - PLATFORM_W);
+                    let p2Y = currentY + (rng() * 40 - 20); // Lệch độ cao chút ít
+                    platforms.push({ 
+                        x: p2X, y: p2Y, w: PLATFORM_W, h: PLATFORM_H, 
+                        visited: false, dx: 0, hasRevive: false, hasShrink: false, hasSnow: false, hasWeb: false 
+                    });
+                }
 
                 simScore++;
                 if(Math.floor(simScore / 10) > Math.floor((simScore-1)/10)) {
@@ -216,9 +250,7 @@
         }
 
         const gyroBtn = document.getElementById('gyro-btn');
-        function handleOrientation(e) {
-            let gamma = e.gamma; if (gamma > 45) gamma = 45; if (gamma < -45) gamma = -45; gyroGamma = gamma;
-        }
+        function handleOrientation(e) { let gamma = e.gamma; if (gamma > 45) gamma = 45; if (gamma < -45) gamma = -45; gyroGamma = gamma; }
         gyroBtn.onclick = () => {
             if (useGyro) {
                 useGyro = false; gyroBtn.classList.remove('gyro-active'); window.removeEventListener('deviceorientation', handleOrientation); player.targetX = player.x; 
@@ -230,127 +262,154 @@
         };
         function enableGyro() { useGyro = true; gyroBtn.classList.add('gyro-active'); window.addEventListener('deviceorientation', handleOrientation); }
 
+        function checkEvol() {
+            let nextLvl = Math.floor(score / 10);
+            if (nextLvl > player.level) {
+                player.level = nextLvl; player.h += 15; player.jumpPower -= 0.35;
+                if(player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP;
+            }
+            document.getElementById('score').innerText = score;
+        }
+
         function loop() {
             if (isGameOver) return;
 
-            // --- LÀM MƯỢT ĐỒNG ĐỘI (CHỐNG LƠ LỬNG) ---
+            if (slowTime > 0) slowTime--;
+
+            // --- KIỂM TRA ĐẦU VÀO MICROPHONE ---
+            if (micActive && !player.isDead) {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                let average = sum / dataArray.length;
+
+                // Nếu thổi hoặc có tiếng ồn mạnh
+                if (average > 75) {
+                    player.vy -= 1.0; // Lực đẩy lên (chống lại trọng lực)
+                    if (player.vy < -player.jumpPower * 1.5) player.vy = -player.jumpPower * 1.5; // Giới hạn tốc độ bay
+                    spawnExhaust(player.x + 15, player.y + player.h); // Hiệu ứng xả khói
+                }
+            }
+
             if (opponentData) {
                 opponentData.screenY = opponentData.worldY + cameraOffset;
                 oppRender.x += (opponentData.x - oppRender.x) * 0.5;
                 
-                // Nếu đối thủ đang nhảy lên (vy âm) HOẶC lệch quá nhiều => Bắt dính (Snap) lập tức
                 if (opponentData.vy < -5 || Math.abs(opponentData.screenY - oppRender.y) > 30) {
                     oppRender.y = opponentData.screenY; 
                 } else {
-                    // Nếu đang rơi xuống => Làm mượt (Lerp)
                     oppRender.y += (opponentData.screenY - oppRender.y) * 0.6; 
                 }
                 
                 oppRender.squash += (opponentData.squash - oppRender.squash) * 0.5;
                 oppRender.angle += (opponentData.angle - oppRender.angle) * 0.5;
-                oppRender.vy = opponentData.vy; 
-                oppRender.isDead = opponentData.isDead;
+                oppRender.vy = opponentData.vy; oppRender.isDead = opponentData.isDead;
                 
-                // Kích hoạt nổ tung cho đồng đội nếu thấy level của họ giảm đi
-                if (opponentData.level < oppRender.level) {
-                    spawnExplosion(oppRender.x + 15, oppRender.y + oppRender.h / 2, '#00f0ff');
-                }
-                oppRender.level = opponentData.level;
-                oppRender.h = opponentData.h; 
+                if (opponentData.level < oppRender.level) { spawnExplosion(oppRender.x + 15, oppRender.y + oppRender.h / 2, '#00f0ff'); }
+                oppRender.level = opponentData.level; oppRender.h = opponentData.h; 
             }
 
             if (!player.isDead) {
-                if (useGyro) player.targetX = player.x + ((gyroGamma / 45) * 15);
-                player.x += (player.targetX - player.x) * (useGyro ? 0.8 : 0.4);
-                if (player.x > canvas.width) player.x = -player.w;
-                if (player.x + player.w < 0) player.x = canvas.width;
+                if (player.webTarget) {
+                    let tx = player.webTarget.x + player.webTarget.w/2 - 15;
+                    let ty = player.webTarget.y - player.h;
+                    
+                    player.x += (tx - player.x) * 0.2;
+                    player.y += (ty - player.y) * 0.2;
+                    player.vy = 0; 
 
-                player.vy += gravity;
-                player.y += player.vy;
-                player.squash += (1.0 - player.squash) * 0.15;
-                if (player.flipAngle > 0) {
-                    let spinSpeed = 0.25; player.angle += spinSpeed * player.flipDir; player.flipAngle -= spinSpeed;
-                    if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; }
-                }
+                    // KHI KÉO TỚI ĐÍCH -> SIÊU BẬT NẢY
+                    if (Math.abs(player.y - ty) < 15) {
+                        player.webTarget.visited = true; // Đánh dấu để không bị dính vòng lặp va chạm
+                        player.webTarget = null;
+                        player.vy = -player.jumpPower * 1.5; // Nhảy vút lên mạnh hơn để không bị kẹt
+                    }
+                } else {
+                    if (useGyro) player.targetX = player.x + ((gyroGamma / 45) * 15);
+                    player.x += (player.targetX - player.x) * (useGyro ? 0.8 : 0.4);
+                    if (player.x > canvas.width) player.x = -player.w;
+                    if (player.x + player.w < 0) player.x = canvas.width;
 
-                // CƠ CHẾ RESET KHI CHẾT
-                if (player.y > canvas.height) {
-                    player.isDead = true;
-                    player.level = 0;
-                    player.h = 30;
-                    player.jumpPower = baseJump;
-                    spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); // Nổ chết
+                    player.vy += gravity; player.y += player.vy;
+                    player.squash += (1.0 - player.squash) * 0.15;
+                    if (player.flipAngle > 0) {
+                        let spinSpeed = 0.25; player.angle += spinSpeed * player.flipDir; player.flipAngle -= spinSpeed;
+                        if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; }
+                    }
+
+                    if (player.y > canvas.height) {
+                        player.isDead = true; player.level = 0; player.h = 30; player.jumpPower = baseJump;
+                        spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); 
+                    }
                 }
             } else {
                 if (opponentData && !opponentData.isDead) {
                     let orbitX = oppRender.x + Math.sin(Date.now() / 300) * 50;
                     let orbitY = oppRender.y - 70 + Math.cos(Date.now() / 300) * 20;
-                    player.x += (orbitX - player.x) * 0.1;
-                    player.y += (orbitY - player.y) * 0.1;
+                    player.x += (orbitX - player.x) * 0.1; player.y += (orbitY - player.y) * 0.1;
                 }
             }
 
-            // Xử lý hiệu ứng hạt (Particles)
             for (let i = particles.length - 1; i >= 0; i--) {
-                let pt = particles[i];
-                pt.x += pt.vx;
-                pt.y += pt.vy;
-                pt.life -= 0.04;
+                let pt = particles[i]; pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.04;
                 if (pt.life <= 0) particles.splice(i, 1);
             }
 
-            // Gửi dữ liệu có chứa thêm level và h (để đồng bộ thân hình)
             if (conn && conn.open) {
                 conn.send({ type: 'update', player: { x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score, level: player.level, h: player.h } });
             }
 
-            if (player.isDead && (!conn || !conn.open || (opponentData && opponentData.isDead))) {
-                gameOver(); return;
-            }
+            if (player.isDead && (!conn || !conn.open || (opponentData && opponentData.isDead))) { gameOver(); return; }
 
-            for (let p of platforms) {
+            // XÉT VA CHẠM
+            for (let i = 0; i < platforms.length; i++) {
+                let p = platforms[i];
+
                 if (p.dx !== 0) {
-                    p.x += p.dx;
+                    let currentDx = (slowTime > 0) ? p.dx * 0.2 : p.dx;
+                    p.x += currentDx;
                     if (p.x < 0) { p.x = 0; p.dx *= -1; }
                     if (p.x + p.w > canvas.width) { p.x = canvas.width - p.w; p.dx *= -1; }
                 }
 
-                if (!player.isDead && player.vy > 0) {
+                if (!player.isDead && player.vy > 0 && !player.webTarget) {
                     if (player.y + player.h >= p.y && player.y + player.h - player.vy <= p.y + p.h) {
                         if (player.x + player.w > p.x - 5 && player.x < p.x + p.w + 5) {
                             
-                            // ĂN ITEM HỒI SINH
                             if (p.hasRevive) {
                                 p.hasRevive = false; 
                                 if (conn && conn.open && opponentData && opponentData.isDead) {
                                     conn.send({ type: 'revive' });
-                                    showReviveToast();
+                                    showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585");
                                 }
                             }
-
-                            // ĂN ITEM THU NHỎ
                             if (p.hasShrink) {
-                                p.hasShrink = false;
-                                spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff');
-                                if (player.level > 0) {
-                                    player.level--;
-                                    player.h = Math.max(30, player.h - 15);
-                                    player.jumpPower = Math.min(baseJump, player.jumpPower + 0.35);
+                                p.hasShrink = false; spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff');
+                                if (player.level > 0) { player.level--; player.h = Math.max(30, player.h - 15); player.jumpPower = Math.min(baseJump, player.jumpPower + 0.35); }
+                            }
+                            if (p.hasSnow) {
+                                p.hasSnow = false; slowTime = 300; showToast("❄️ ĐÓNG BĂNG THỜI GIAN! ❄️", "#80d0ff");
+                                if(conn && conn.open) conn.send({type: 'slow'});
+                            }
+                            if (p.hasWeb) {
+                                p.hasWeb = false;
+                                // Tìm bậc xa nhất trong khoảng 5 bậc tới
+                                let targetIdx = Math.min(i + 8, platforms.length - 1);
+                                player.webTarget = platforms[targetIdx];
+                                showToast("🕸️ NGƯỜI NHỆN! 🕸️", "#fff");
+                                
+                                for(let j = i; j <= targetIdx; j++) {
+                                    if(!platforms[j].visited) { platforms[j].visited = true; score++; }
                                 }
+                                checkEvol();
                             }
 
-                            player.vy = -player.jumpPower; 
-                            player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0;
-                            player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
-                            
-                            if (!p.visited) {
-                                p.visited = true; score++;
-                                let nextLvl = Math.floor(score / 10);
-                                if (nextLvl > player.level) {
-                                    player.level = nextLvl; player.h += 15; player.jumpPower -= 0.35;
-                                    if(player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP;
-                                }
-                                document.getElementById('score').innerText = score;
+                            if(!player.webTarget) {
+                                player.vy = -player.jumpPower; 
+                                player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0;
+                                player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
+                                
+                                if (!p.visited) { p.visited = true; score++; checkEvol(); }
                             }
                         }
                     }
@@ -365,8 +424,8 @@
                 let camDiff = cameraThreshold - focusY;
                 cameraOffset += camDiff; 
                 platforms.forEach(p => p.y += camDiff);
-                player.y += camDiff;
-                oppRender.y += camDiff;
+                player.y += camDiff; oppRender.y += camDiff;
+                if(player.webTarget) player.webTarget.y += camDiff; 
             }
 
             draw();
@@ -379,11 +438,14 @@
                 ctx.shadowBlur = 15; ctx.shadowColor = '#fff';
                 ctx.fillText("💀", entity.x + 15, entity.y + 15);
                 ctx.shadowBlur = 0; 
+                
+                let floatOffset = Math.sin(Date.now() / 150) * 5;
+                ctx.font = "bold 14px Courier New"; ctx.fillStyle = "#ff9f1c";
+                ctx.fillText("ê cứu tui", entity.x + 15, entity.y - 15 + floatOffset);
                 return;
             }
             ctx.save(); 
-            let w = 30; 
-            let h = entity.h || 30; // Lấy chiều cao thực tế để cả 2 máy đều thấy nhau dài/ngắn
+            let w = 30; let h = entity.h || 30; 
             let cx = entity.x + 15; let cy = entity.y + h / 2;
 
             ctx.translate(cx, cy); ctx.rotate(entity.angle); ctx.scale(2 - entity.squash, entity.squash);
@@ -403,9 +465,7 @@
 
         function drawRadar() {
             if (opponentData && !opponentData.isDead) {
-                let oppScreenX = oppRender.x + 15;
-                let oppScreenY = oppRender.y + 15;
-                
+                let oppScreenX = oppRender.x + 15; let oppScreenY = oppRender.y + 15;
                 if (oppScreenY < 0 || oppScreenY > canvas.height) {
                     ctx.save(); ctx.fillStyle = '#ff9f1c'; ctx.shadowBlur = 15; ctx.shadowColor = '#ff9f1c'; ctx.beginPath();
                     if (oppScreenY < 0) {
@@ -423,6 +483,8 @@
         function draw() {
             ctx.fillStyle = '#0b0c10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            if (slowTime > 0) { ctx.fillStyle = "rgba(0, 200, 255, 0.08)"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+
             for (let p of platforms) {
                 if(p.y > canvas.height + 50 || p.y < -50) continue; 
                 
@@ -432,25 +494,23 @@
                 } else { ctx.fillStyle = '#1f2833'; ctx.shadowBlur = 0; }
                 ctx.fillRect(p.x, p.y, p.w, p.h);
 
-                if (p.hasRevive) {
-                    ctx.font = "24px Arial"; ctx.textAlign = "center";
-                    ctx.shadowBlur = 15; ctx.shadowColor = '#f72585';
-                    let bounce = Math.sin(Date.now() / 200) * 5;
-                    ctx.fillText("💖", p.x + p.w / 2, p.y - 15 + bounce);
-                    ctx.shadowBlur = 0;
-                }
+                ctx.font = "24px Arial"; ctx.textAlign = "center";
+                let bounce = Math.sin(Date.now() / 200) * 5;
 
-                // VẼ ITEM THU NHỎ (Pha lê xanh quay tròn)
-                if (p.hasShrink) {
-                    ctx.save();
-                    ctx.translate(p.x + p.w / 2, p.y - 15);
-                    ctx.rotate(Date.now() / 150);
-                    ctx.fillStyle = '#00f0ff';
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#00f0ff';
-                    ctx.fillRect(-8, -8, 16, 16);
-                    ctx.restore();
+                if (p.hasRevive) { ctx.shadowBlur = 15; ctx.shadowColor = '#f72585'; ctx.fillText("💖", p.x + p.w / 2, p.y - 15 + bounce); }
+                else if (p.hasSnow) { ctx.shadowBlur = 15; ctx.shadowColor = '#00f0ff'; ctx.fillText("❄️", p.x + p.w / 2, p.y - 15 + bounce); }
+                else if (p.hasWeb) { ctx.shadowBlur = 15; ctx.shadowColor = '#fff'; ctx.fillText("🕸️", p.x + p.w / 2, p.y - 15 + bounce); }
+                else if (p.hasShrink) {
+                    ctx.save(); ctx.translate(p.x + p.w / 2, p.y - 15); ctx.rotate(Date.now() / 150);
+                    ctx.fillStyle = '#00f0ff'; ctx.shadowBlur = 15; ctx.shadowColor = '#00f0ff';
+                    ctx.fillRect(-8, -8, 16, 16); ctx.restore();
                 }
+                ctx.shadowBlur = 0;
+            }
+
+            if (player.webTarget) {
+                ctx.beginPath(); ctx.moveTo(player.x + 15, player.y + 15); ctx.lineTo(player.webTarget.x + player.webTarget.w/2, player.webTarget.y + player.webTarget.h/2);
+                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3; ctx.shadowBlur = 15; ctx.shadowColor = "#ffffff"; ctx.stroke(); ctx.shadowBlur = 0;
             }
 
             if (opponentData) { if (opponentData.isDead) drawEntity(oppRender, '#ff9f1c', true); }
@@ -459,15 +519,9 @@
             if (opponentData && !opponentData.isDead) drawEntity(oppRender, '#ff9f1c', true);
             if (!player.isDead) drawEntity(player, '#66fcf1', false);
 
-            // Vẽ hiệu ứng hạt
             particles.forEach(pt => {
-                ctx.globalAlpha = pt.life;
-                ctx.fillStyle = pt.color;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = pt.color;
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.globalAlpha = pt.life; ctx.fillStyle = pt.color; ctx.shadowBlur = 15; ctx.shadowColor = pt.color;
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); ctx.fill();
             });
             ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
 
