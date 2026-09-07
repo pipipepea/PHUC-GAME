@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Jumper - Tùy Chỉnh</title>
+    <title>Neon Jumper - Cảm Biến Gyro</title>
     <style>
         body { 
             margin: 0; 
@@ -30,20 +30,33 @@
         .stat { margin-bottom: 5px; font-size: 16px; font-weight: bold; text-shadow: 0 0 5px #66fcf1;}
         #score-display { font-size: 24px; color: #45a29e; }
         
-        /* Nút Cài đặt */
-        #settings-btn {
+        /* Cụm nút điều khiển góc phải */
+        #top-right-controls {
             position: absolute;
             top: 20px;
             right: 20px;
-            font-size: 30px;
-            cursor: pointer;
+            display: flex;
+            gap: 15px;
             z-index: 15;
-            transition: transform 0.2s;
-            text-shadow: 0 0 10px #66fcf1;
         }
-        #settings-btn:hover { transform: rotate(90deg); }
+        .icon-btn {
+            font-size: 28px;
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+            text-shadow: 0 0 10px #66fcf1;
+            user-select: none;
+            background: rgba(11, 12, 16, 0.6);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #45a29e;
+        }
+        .icon-btn:hover { transform: scale(1.1); }
+        .gyro-active { filter: hue-rotate(90deg) brightness(1.5); border-color: #2ecc71; }
 
-        /* Menu Cài đặt */
         #settings-menu {
             position: absolute;
             top: 50%;
@@ -59,22 +72,10 @@
             display: none;
             box-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
         }
-        #settings-menu h2 {
-            margin: 0 0 20px 0;
-            text-align: center;
-            text-shadow: 0 0 8px #66fcf1;
-        }
+        #settings-menu h2 { margin: 0 0 20px 0; text-align: center; text-shadow: 0 0 8px #66fcf1; }
         .setting-row { margin-bottom: 20px; }
-        .setting-row label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        input[type="range"] {
-            width: 100%;
-            accent-color: #45a29e;
-        }
+        .setting-row label { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; }
+        input[type="range"] { width: 100%; accent-color: #45a29e; }
         
         #game-over { 
             position: absolute; 
@@ -105,6 +106,23 @@
         }
         button:hover { background: rgba(102, 252, 241, 0.2); }
         button:active { background: #66fcf1; color: #0b0c10; }
+
+        /* Thông báo cảm biến */
+        #gyro-toast {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2ecc71;
+            color: #0b0c10;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            z-index: 50;
+        }
     </style>
 </head>
 <body>
@@ -113,10 +131,13 @@
         <div class="stat">Chiều dài: <span id="length">1</span>x</div>
     </div>
 
-    <!-- Nút mở Menu Cài đặt -->
-    <div id="settings-btn">⚙️</div>
+    <div id="top-right-controls">
+        <div class="icon-btn" id="gyro-btn" title="Bật Cảm Biến Nghiêng">📱</div>
+        <div class="icon-btn" id="settings-btn" title="Cài Đặt Vật Lý">⚙️</div>
+    </div>
 
-    <!-- Bảng Cài đặt -->
+    <div id="gyro-toast">Đã Bật Cảm Biến Nghiêng!</div>
+
     <div id="settings-menu">
         <h2>TÙY CHỈNH VẬT LÝ</h2>
         <div class="setting-row">
@@ -145,22 +166,25 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        // --- CÁC THÔNG SỐ VẬT LÝ (Biến động thay vì Hằng số) ---
         let gravity = 0.3;         
         let baseJump = 11;        
-        
         const PLATFORM_W = 95;       
         const PLATFORM_H = 12;
         const MIN_JUMP = 7.5;        
 
         let player, platforms, score, isGameOver, isPaused, gameLoopId;
+        
+        // --- TRẠNG THÁI CẢM BIẾN ---
+        let useGyro = false;
+        let gyroGamma = 0; 
 
-        // Elements Menu
         const settingsMenu = document.getElementById('settings-menu');
         const gravSlider = document.getElementById('grav-slider');
         const jumpSlider = document.getElementById('jump-slider');
         const gravVal = document.getElementById('grav-val');
         const jumpVal = document.getElementById('jump-val');
+        const gyroBtn = document.getElementById('gyro-btn');
+        const gyroToast = document.getElementById('gyro-toast');
 
         function initGame() {
             score = 0;
@@ -173,11 +197,9 @@
                 x: canvas.width / 2 - 15,
                 y: canvas.height / 2,
                 targetX: canvas.width / 2 - 15,
-                w: 30,
-                h: 30,
-                vy: 0,
-                jumpPower: baseJump,
-                level: 0
+                w: 30, h: 30, vy: 0,
+                jumpPower: baseJump, level: 0,
+                squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1
             };
 
             platforms = [];
@@ -185,21 +207,18 @@
                 x: canvas.width / 2 - PLATFORM_W / 2, 
                 y: canvas.height - 100, 
                 w: PLATFORM_W, h: PLATFORM_H, 
-                visited: true 
+                visited: true, dx: 0 
             });
 
             generatePlatforms(canvas.height);
             updateUI();
-            
-            // Xóa vòng lặp cũ (nếu có) trước khi tạo mới để tránh chạy đè
             cancelAnimationFrame(gameLoopId);
             loop();
         }
 
-        // Tính khoảng cách an toàn dựa trên Trọng lực và Lực bật HIỆN TẠI
         function getMaxJumpHeight() {
             let maxTheoretical = (player.jumpPower * player.jumpPower) / (2 * gravity);
-            return maxTheoretical * 0.75; // Dung sai 75% cho an toàn
+            return maxTheoretical * 0.75; 
         }
 
         function generatePlatforms(startY) {
@@ -208,7 +227,6 @@
             
             while (currentY > -canvas.height) {
                 let maxSafeGap = getMaxJumpHeight();
-                // Giới hạn khoảng cách tối thiểu
                 let minGap = Math.min(40, maxSafeGap * 0.5); 
                 
                 let gapY = Math.random() * (maxSafeGap - minGap) + minGap;
@@ -217,10 +235,13 @@
                 let maxX = canvas.width - PLATFORM_W;
                 let newX = Math.random() * maxX;
                 
+                let isMoving = Math.random() < 0.35 && platforms.length > 2;
+                let speed = isMoving ? (Math.random() > 0.5 ? 2.5 : -2.5) : 0;
+
                 platforms.push({ 
                     x: newX, y: currentY, 
                     w: PLATFORM_W, h: PLATFORM_H, 
-                    visited: false 
+                    visited: false, dx: speed
                 });
             }
         }
@@ -230,9 +251,7 @@
             if (nextLevel > player.level) {
                 player.level = nextLevel;
                 player.h += 15; 
-                // Cập nhật lại jumpPower dựa trên cấu hình tùy chỉnh
                 player.jumpPower = baseJump - (player.level * 0.35);
-                
                 if (player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP; 
             }
         }
@@ -242,7 +261,53 @@
             document.getElementById('length').innerText = player.level + 1;
         }
 
-        // --- XỬ LÝ SỰ KIỆN MENU ---
+        // --- HỆ THỐNG YÊU CẦU QUYỀN GYROSCOPE ---
+        function handleOrientation(event) {
+            // Gamma là góc nghiêng trái/phải (từ -90 đến 90)
+            let gamma = event.gamma; 
+            if (gamma > 45) gamma = 45; // Giới hạn góc nghiêng để dễ kiểm soát
+            if (gamma < -45) gamma = -45;
+            gyroGamma = gamma;
+        }
+
+        gyroBtn.addEventListener('click', () => {
+            if (useGyro) {
+                // Đang bật -> Tắt
+                useGyro = false;
+                gyroBtn.classList.remove('gyro-active');
+                window.removeEventListener('deviceorientation', handleOrientation);
+                // Khôi phục targetX bằng x hiện tại để không bị giật
+                player.targetX = player.x; 
+            } else {
+                // Yêu cầu quyền truy cập (Dành cho iOS/Trình duyệt bảo mật)
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    DeviceOrientationEvent.requestPermission()
+                        .then(permissionState => {
+                            if (permissionState === 'granted') {
+                                enableGyro();
+                            } else {
+                                alert('Trình duyệt đã từ chối quyền truy cập cảm biến!');
+                            }
+                        })
+                        .catch(console.error);
+                } else {
+                    // Trình duyệt không yêu cầu xin quyền (như máy tính hoặc Android cũ)
+                    enableGyro();
+                }
+            }
+        });
+
+        function enableGyro() {
+            useGyro = true;
+            gyroBtn.classList.add('gyro-active');
+            window.addEventListener('deviceorientation', handleOrientation);
+            
+            // Hiển thị thông báo
+            gyroToast.style.opacity = '1';
+            setTimeout(() => { gyroToast.style.opacity = '0'; }, 2000);
+        }
+
+        // MENU XỬ LÝ
         document.getElementById('settings-btn').addEventListener('click', () => {
             isPaused = true;
             settingsMenu.style.display = 'block';
@@ -250,33 +315,29 @@
 
         document.getElementById('close-settings-btn').addEventListener('click', () => {
             settingsMenu.style.display = 'none';
-            // Cập nhật sức bật nếu người dùng vừa kéo thanh trượt
             player.jumpPower = baseJump - (player.level * 0.35);
             if (player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP; 
-            
-            // Nếu có thể nhảy quá thấp so với các bậc đã sinh trước đó, sinh lại từ đầu màn hình cho an toàn
             generatePlatforms(0); 
-
             isPaused = false;
-            loop(); // Tiếp tục vòng lặp
+            loop(); 
         });
 
-        // Lắng nghe thanh trượt (Cập nhật thời gian thực vào con số)
-        gravSlider.addEventListener('input', (e) => {
-            gravity = parseFloat(e.target.value);
-            gravVal.innerText = gravity.toFixed(2);
-        });
-
-        jumpSlider.addEventListener('input', (e) => {
-            baseJump = parseFloat(e.target.value);
-            jumpVal.innerText = baseJump.toFixed(1);
-        });
+        gravSlider.addEventListener('input', (e) => { gravity = parseFloat(e.target.value); gravVal.innerText = gravity.toFixed(2); });
+        jumpSlider.addEventListener('input', (e) => { baseJump = parseFloat(e.target.value); jumpVal.innerText = baseJump.toFixed(1); });
 
         function loop() {
             if (isGameOver || isPaused) return;
 
-            // Di chuyển mượt mà bám sát
-            player.x += (player.targetX - player.x) * 0.4;
+            // --- XỬ LÝ DI CHUYỂN BẰNG CẢM BIẾN ---
+            if (useGyro) {
+                // Biến đổi góc nghiêng thành tốc độ di chuyển
+                // Nghiêng 45 độ = tốc độ tối đa ~ 15px/frame
+                let moveAmount = (gyroGamma / 45) * 15; 
+                player.targetX = player.x + moveAmount;
+            }
+
+            // Mượt mà hóa chuyển động ngang
+            player.x += (player.targetX - player.x) * (useGyro ? 0.8 : 0.4);
 
             // Xuyên tường
             if (player.x > canvas.width) player.x = -player.w;
@@ -285,16 +346,42 @@
             player.vy += gravity;
             player.y += player.vy;
 
-            // Xét va chạm
-            if (player.vy > 0) {
-                for (let i = 0; i < platforms.length; i++) {
-                    let p = platforms[i];
+            // Animation khôi phục
+            player.squash += (1.0 - player.squash) * 0.15;
+            
+            if (player.flipAngle > 0) {
+                let spinSpeed = 0.25; 
+                player.angle += spinSpeed * player.flipDir;
+                player.flipAngle -= spinSpeed;
+                if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; }
+            }
+
+            for (let i = 0; i < platforms.length; i++) {
+                let p = platforms[i];
+                
+                if (p.dx !== 0) {
+                    p.x += p.dx;
+                    if (p.x < 0) { p.x = 0; p.dx *= -1; }
+                    if (p.x + p.w > canvas.width) { p.x = canvas.width - p.w; p.dx *= -1; }
+                }
+
+                if (player.vy > 0) {
                     let playerBottom = player.y + player.h;
                     let prevPlayerBottom = playerBottom - player.vy;
                     
                     if (playerBottom >= p.y && prevPlayerBottom <= p.y + p.h) {
                         if (player.x + player.w > p.x - 5 && player.x < p.x + p.w + 5) {
                             player.vy = -player.jumpPower; 
+                            player.squash = 0.4; 
+                            player.flipAngle = Math.PI * 2; 
+                            player.angle = 0;
+                            
+                            // Lộn vòng theo hướng đang nghiêng hoặc hướng chuột
+                            if (useGyro) {
+                                player.flipDir = (gyroGamma > 0) ? 1 : -1;
+                            } else {
+                                player.flipDir = (player.targetX > player.x) ? 1 : -1;
+                            }
                             
                             if (!p.visited) {
                                 p.visited = true;
@@ -302,7 +389,6 @@
                                 checkEvolution();
                                 updateUI();
                             }
-                            break;
                         }
                     }
                 }
@@ -316,14 +402,9 @@
             }
 
             platforms = platforms.filter(p => p.y < canvas.height + 100);
-            if (platforms[platforms.length - 1].y > 0) {
-                generatePlatforms(0);
-            }
+            if (platforms[platforms.length - 1].y > 0) generatePlatforms(0);
 
-            if (player.y > canvas.height) {
-                gameOver();
-                return;
-            }
+            if (player.y > canvas.height) { gameOver(); return; }
 
             draw();
             gameLoopId = requestAnimationFrame(loop);
@@ -335,9 +416,15 @@
 
             for (let p of platforms) {
                 if (!p.visited) {
-                    ctx.fillStyle = '#45a29e';
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#66fcf1';
+                    if (p.dx !== 0) {
+                        ctx.fillStyle = '#f72585';
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = '#f72585';
+                    } else {
+                        ctx.fillStyle = '#45a29e';
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = '#66fcf1';
+                    }
                 } else {
                     ctx.fillStyle = '#1f2833';
                     ctx.shadowBlur = 0;
@@ -345,14 +432,32 @@
                 ctx.fillRect(p.x, p.y, p.w, p.h);
             }
 
+            ctx.save(); 
+            let cx = player.x + player.w / 2;
+            let cy = player.y + player.h / 2;
+            ctx.translate(cx, cy);
+            ctx.rotate(player.angle);
+            ctx.scale(2 - player.squash, player.squash);
+
             ctx.fillStyle = '#66fcf1';
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#66fcf1';
-            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.fillRect(-player.w / 2, -player.h / 2, player.w, player.h);
             
             ctx.fillStyle = '#0b0c10';
             ctx.shadowBlur = 0;
-            ctx.fillRect(player.x + 6, player.y + 6, player.w - 12, 6);
+            ctx.fillRect(-player.w / 2 + 6, -player.h / 2 + 6, player.w - 12, 6);
+
+            let handOffset = -player.vy * 1.5; 
+            if (handOffset < -18) handOffset = -18;
+            if (handOffset > 10) handOffset = 10;
+
+            ctx.fillStyle = '#45a29e';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(-player.w / 2 - 12, handOffset - 6, 8, 12);
+            ctx.fillRect(player.w / 2 + 4, handOffset - 6, 8, 12);
+
+            ctx.restore(); 
         }
 
         function gameOver() {
@@ -362,22 +467,19 @@
         }
 
         function handleMovement(xClient) {
-            if(!isPaused && !isGameOver) {
+            // Chỉ nhận điều khiển cảm ứng/chuột nếu chưa bật cảm biến Gyro
+            if(!isPaused && !isGameOver && !useGyro) {
                 player.targetX = xClient - player.w / 2;
             }
         }
 
         canvas.addEventListener('touchmove', (e) => {
-            if(e.target !== gravSlider && e.target !== jumpSlider) {
-                e.preventDefault();
-            }
+            if(e.target.tagName !== 'INPUT' && !e.target.classList.contains('icon-btn')) e.preventDefault();
             handleMovement(e.touches[0].clientX);
         }, {passive: false});
 
         canvas.addEventListener('touchstart', (e) => {
-            if(e.target !== gravSlider && e.target !== jumpSlider) {
-                e.preventDefault();
-            }
+            if(e.target.tagName !== 'INPUT' && !e.target.classList.contains('icon-btn')) e.preventDefault();
             handleMovement(e.touches[0].clientX);
         }, {passive: false});
 
