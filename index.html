@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Jumper - Seamless Multiplayer</title>
+    <title>Neon Jumper - Ultimate Sync & Items</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background: #0b0c10; color: #66fcf1; font-family: 'Courier New', Courier, monospace; touch-action: none; cursor: crosshair; }
@@ -39,7 +39,7 @@
 <body>
     <div id="mp-lobby">
         <h1>NEON JUMPER</h1>
-        <p>Phiên bản Sinh Tồn Đồng Đội</p>
+        <p>Bản Siêu Mượt & Item Thu Nhỏ</p>
         
         <div class="box">
             <h3>Mã Phòng Của Bạn</h3>
@@ -81,7 +81,7 @@
         let conn = null;
         let opponentData = null; 
         
-        let oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0 }; 
+        let oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, level: 0, h: 30 }; 
 
         peer.on('open', (id) => { document.getElementById('my-id-display').innerText = id; });
         peer.on('error', (err) => {
@@ -101,7 +101,7 @@
                     document.getElementById('connect-btn').innerText = "Đã tìm thấy!";
                     conn.send({ type: 'ready' });
                 });
-            } else alert("Cậu chủ chưa nhập mã phòng!");
+            }
         };
 
         function showReviveToast() {
@@ -121,10 +121,7 @@
                     conn.send({ type: 'start', seed: seed });
                     startGame(seed);
                 } 
-                else if (data.type === 'start') {
-                    // Lệnh Restart từ đồng đội
-                    startGame(data.seed);
-                }
+                else if (data.type === 'start') { startGame(data.seed); }
                 else if (data.type === 'update') {
                     opponentData = data.player;
                     document.getElementById('opp-score').innerText = opponentData.score;
@@ -143,14 +140,9 @@
 
         function LCG(seed) { return function() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; } }
         document.getElementById('solo-btn').onclick = () => { startGame(Math.random()); };
-
-        // Xử lý nút Chơi Lại Cùng Nhau
         document.getElementById('restart-btn').addEventListener('click', () => {
             let seed = Math.floor(Math.random() * 99999);
-            // Gửi lệnh qua máy bạn bè để cùng reset
-            if (conn && conn.open) {
-                conn.send({ type: 'start', seed: seed });
-            }
+            if (conn && conn.open) conn.send({ type: 'start', seed: seed });
             startGame(seed);
         });
 
@@ -166,6 +158,20 @@
         let useGyro = false, gyroGamma = 0; 
         let cameraOffset = 0; 
         
+        // --- HỆ THỐNG HIỆU ỨNG HẠT (PARTICLES) ---
+        let particles = [];
+        function spawnExplosion(x, y, color) {
+            for(let i = 0; i < 20; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: (Math.random() - 0.5) * 15,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+        
         function startGame(seed) {
             document.getElementById('mp-lobby').style.display = 'none';
             document.getElementById('game-over').style.display = 'none';
@@ -174,14 +180,13 @@
         }
 
         function initGame(seed) {
-            score = 0; isGameOver = false; cameraOffset = 0;
-            // Xóa dữ liệu cũ của cả 2
+            score = 0; isGameOver = false; cameraOffset = 0; particles = [];
             opponentData = null; 
-            oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0 }; 
+            oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, level: 0, h: 30 }; 
 
             player = { x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, w: 30, h: 30, vy: 0, jumpPower: baseJump, level: 0, squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1, isDead: false };
             platforms = [];
-            platforms.push({ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0, hasRevive: false });
+            platforms.push({ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0, hasRevive: false, hasShrink: false });
             
             let rng = LCG(seed);
             let currentY = canvas.height - 100;
@@ -194,9 +199,11 @@
                 
                 let isMoving = rng() < 0.35 && i > 2;
                 let speed = isMoving ? (rng() > 0.5 ? 2.5 : -2.5) : 0;
+                
                 let hasHeart = (rng() < 0.12) && i > 10;
+                let hasShrink = (rng() < 0.10) && !hasHeart && i > 5; // Item Xanh (10%)
 
-                platforms.push({ x: rng() * (canvas.width - PLATFORM_W), y: currentY, w: PLATFORM_W, h: PLATFORM_H, visited: false, dx: speed, hasRevive: hasHeart });
+                platforms.push({ x: rng() * (canvas.width - PLATFORM_W), y: currentY, w: PLATFORM_W, h: PLATFORM_H, visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink });
 
                 simScore++;
                 if(Math.floor(simScore / 10) > Math.floor((simScore-1)/10)) {
@@ -226,14 +233,30 @@
         function loop() {
             if (isGameOver) return;
 
+            // --- LÀM MƯỢT ĐỒNG ĐỘI (CHỐNG LƠ LỬNG) ---
             if (opponentData) {
                 opponentData.screenY = opponentData.worldY + cameraOffset;
-                oppRender.x += (opponentData.x - oppRender.x) * 0.3;
-                oppRender.y += (opponentData.screenY - oppRender.y) * 0.3;
-                oppRender.squash += (opponentData.squash - oppRender.squash) * 0.3;
-                oppRender.angle += (opponentData.angle - oppRender.angle) * 0.3;
+                oppRender.x += (opponentData.x - oppRender.x) * 0.5;
+                
+                // Nếu đối thủ đang nhảy lên (vy âm) HOẶC lệch quá nhiều => Bắt dính (Snap) lập tức
+                if (opponentData.vy < -5 || Math.abs(opponentData.screenY - oppRender.y) > 30) {
+                    oppRender.y = opponentData.screenY; 
+                } else {
+                    // Nếu đang rơi xuống => Làm mượt (Lerp)
+                    oppRender.y += (opponentData.screenY - oppRender.y) * 0.6; 
+                }
+                
+                oppRender.squash += (opponentData.squash - oppRender.squash) * 0.5;
+                oppRender.angle += (opponentData.angle - oppRender.angle) * 0.5;
                 oppRender.vy = opponentData.vy; 
                 oppRender.isDead = opponentData.isDead;
+                
+                // Kích hoạt nổ tung cho đồng đội nếu thấy level của họ giảm đi
+                if (opponentData.level < oppRender.level) {
+                    spawnExplosion(oppRender.x + 15, oppRender.y + oppRender.h / 2, '#00f0ff');
+                }
+                oppRender.level = opponentData.level;
+                oppRender.h = opponentData.h; 
             }
 
             if (!player.isDead) {
@@ -250,7 +273,14 @@
                     if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; }
                 }
 
-                if (player.y > canvas.height) player.isDead = true;
+                // CƠ CHẾ RESET KHI CHẾT
+                if (player.y > canvas.height) {
+                    player.isDead = true;
+                    player.level = 0;
+                    player.h = 30;
+                    player.jumpPower = baseJump;
+                    spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); // Nổ chết
+                }
             } else {
                 if (opponentData && !opponentData.isDead) {
                     let orbitX = oppRender.x + Math.sin(Date.now() / 300) * 50;
@@ -260,8 +290,18 @@
                 }
             }
 
+            // Xử lý hiệu ứng hạt (Particles)
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.life -= 0.04;
+                if (pt.life <= 0) particles.splice(i, 1);
+            }
+
+            // Gửi dữ liệu có chứa thêm level và h (để đồng bộ thân hình)
             if (conn && conn.open) {
-                conn.send({ type: 'update', player: { x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score } });
+                conn.send({ type: 'update', player: { x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score, level: player.level, h: player.h } });
             }
 
             if (player.isDead && (!conn || !conn.open || (opponentData && opponentData.isDead))) {
@@ -279,11 +319,23 @@
                     if (player.y + player.h >= p.y && player.y + player.h - player.vy <= p.y + p.h) {
                         if (player.x + player.w > p.x - 5 && player.x < p.x + p.w + 5) {
                             
+                            // ĂN ITEM HỒI SINH
                             if (p.hasRevive) {
                                 p.hasRevive = false; 
                                 if (conn && conn.open && opponentData && opponentData.isDead) {
                                     conn.send({ type: 'revive' });
                                     showReviveToast();
+                                }
+                            }
+
+                            // ĂN ITEM THU NHỎ
+                            if (p.hasShrink) {
+                                p.hasShrink = false;
+                                spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff');
+                                if (player.level > 0) {
+                                    player.level--;
+                                    player.h = Math.max(30, player.h - 15);
+                                    player.jumpPower = Math.min(baseJump, player.jumpPower + 0.35);
                                 }
                             }
 
@@ -306,9 +358,7 @@
             }
 
             let focusY = player.y;
-            if (player.isDead && opponentData && !opponentData.isDead) {
-                focusY = oppRender.y;
-            }
+            if (player.isDead && opponentData && !opponentData.isDead) { focusY = oppRender.y; }
 
             const cameraThreshold = canvas.height / 2;
             if (focusY < cameraThreshold) {
@@ -332,8 +382,9 @@
                 return;
             }
             ctx.save(); 
-            let cx = entity.x + 15; let cy = entity.y + (isOpponent ? 15 : player.h / 2);
-            let w = 30; let h = isOpponent ? 30 : player.h;
+            let w = 30; 
+            let h = entity.h || 30; // Lấy chiều cao thực tế để cả 2 máy đều thấy nhau dài/ngắn
+            let cx = entity.x + 15; let cy = entity.y + h / 2;
 
             ctx.translate(cx, cy); ctx.rotate(entity.angle); ctx.scale(2 - entity.squash, entity.squash);
             ctx.fillStyle = colorMain; ctx.shadowBlur = 20; ctx.shadowColor = colorMain;
@@ -350,36 +401,19 @@
             ctx.restore();
         }
 
-        // VẼ MŨI TÊN RADAR BÁO ĐỒNG ĐỘI NGOÀI MÀN HÌNH
         function drawRadar() {
             if (opponentData && !opponentData.isDead) {
                 let oppScreenX = oppRender.x + 15;
                 let oppScreenY = oppRender.y + 15;
                 
-                // Nếu đồng đội bay ra khỏi giới hạn màn hình
                 if (oppScreenY < 0 || oppScreenY > canvas.height) {
-                    ctx.save();
-                    ctx.fillStyle = '#ff9f1c';
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#ff9f1c';
-                    ctx.beginPath();
-                    
+                    ctx.save(); ctx.fillStyle = '#ff9f1c'; ctx.shadowBlur = 15; ctx.shadowColor = '#ff9f1c'; ctx.beginPath();
                     if (oppScreenY < 0) {
-                        // Vẽ mũi tên chỉ lên
-                        ctx.moveTo(oppScreenX, 20);
-                        ctx.lineTo(oppScreenX - 12, 40);
-                        ctx.lineTo(oppScreenX + 12, 40);
-                        ctx.fill();
-                        ctx.font = "bold 12px Courier New"; ctx.textAlign = "center";
-                        ctx.fillText("ĐỒNG ĐỘI", oppScreenX, 55);
+                        ctx.moveTo(oppScreenX, 20); ctx.lineTo(oppScreenX - 12, 40); ctx.lineTo(oppScreenX + 12, 40);
+                        ctx.fill(); ctx.font = "bold 12px Courier New"; ctx.textAlign = "center"; ctx.fillText("ĐỒNG ĐỘI", oppScreenX, 55);
                     } else {
-                        // Vẽ mũi tên chỉ xuống
-                        ctx.moveTo(oppScreenX, canvas.height - 20);
-                        ctx.lineTo(oppScreenX - 12, canvas.height - 40);
-                        ctx.lineTo(oppScreenX + 12, canvas.height - 40);
-                        ctx.fill();
-                        ctx.font = "bold 12px Courier New"; ctx.textAlign = "center";
-                        ctx.fillText("ĐỒNG ĐỘI", oppScreenX, canvas.height - 55);
+                        ctx.moveTo(oppScreenX, canvas.height - 20); ctx.lineTo(oppScreenX - 12, canvas.height - 40); ctx.lineTo(oppScreenX + 12, canvas.height - 40);
+                        ctx.fill(); ctx.font = "bold 12px Courier New"; ctx.textAlign = "center"; ctx.fillText("ĐỒNG ĐỘI", oppScreenX, canvas.height - 55);
                     }
                     ctx.restore();
                 }
@@ -405,17 +439,39 @@
                     ctx.fillText("💖", p.x + p.w / 2, p.y - 15 + bounce);
                     ctx.shadowBlur = 0;
                 }
+
+                // VẼ ITEM THU NHỎ (Pha lê xanh quay tròn)
+                if (p.hasShrink) {
+                    ctx.save();
+                    ctx.translate(p.x + p.w / 2, p.y - 15);
+                    ctx.rotate(Date.now() / 150);
+                    ctx.fillStyle = '#00f0ff';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#00f0ff';
+                    ctx.fillRect(-8, -8, 16, 16);
+                    ctx.restore();
+                }
             }
 
-            if (opponentData) {
-                if (opponentData.isDead) drawEntity(oppRender, '#ff9f1c', true);
-            }
+            if (opponentData) { if (opponentData.isDead) drawEntity(oppRender, '#ff9f1c', true); }
             if (player.isDead) drawEntity(player, '#66fcf1', false);
 
             if (opponentData && !opponentData.isDead) drawEntity(oppRender, '#ff9f1c', true);
             if (!player.isDead) drawEntity(player, '#66fcf1', false);
 
-            drawRadar(); // Gọi hàm vẽ radar
+            // Vẽ hiệu ứng hạt
+            particles.forEach(pt => {
+                ctx.globalAlpha = pt.life;
+                ctx.fillStyle = pt.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
+
+            drawRadar(); 
         }
 
         function gameOver() {
@@ -430,7 +486,6 @@
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
-
         window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
     </script>
 </body>
