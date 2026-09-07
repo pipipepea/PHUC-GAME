@@ -3,257 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Jumper - Cảm Biến Gyro</title>
+    <title>Neon Jumper - Multiplayer (WebRTC)</title>
+    <!-- Thư viện PeerJS hỗ trợ WebRTC P2P -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { 
-            margin: 0; 
-            padding: 0;
-            overflow: hidden; 
-            background: #0b0c10; 
-            color: #66fcf1; 
+            margin: 0; padding: 0; overflow: hidden; 
+            background: #0b0c10; color: #66fcf1; 
             font-family: 'Courier New', Courier, monospace; 
-            touch-action: none; 
-            cursor: crosshair; 
+            touch-action: none; cursor: crosshair; 
         }
-        canvas { 
-            display: block; 
-            width: 100vw; 
-            height: 100vh; 
-        }
-        #ui-layer { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            pointer-events: none; 
-            z-index: 10;
-        }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        
+        #ui-layer { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
         .stat { margin-bottom: 5px; font-size: 16px; font-weight: bold; text-shadow: 0 0 5px #66fcf1;}
         #score-display { font-size: 24px; color: #45a29e; }
-        
-        /* Cụm nút điều khiển góc phải */
-        #top-right-controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            gap: 15px;
-            z-index: 15;
-        }
-        .icon-btn {
-            font-size: 28px;
-            cursor: pointer;
-            transition: transform 0.2s, filter 0.2s;
-            text-shadow: 0 0 10px #66fcf1;
-            user-select: none;
-            background: rgba(11, 12, 16, 0.6);
-            border-radius: 50%;
-            width: 45px;
-            height: 45px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border: 1px solid #45a29e;
-        }
-        .icon-btn:hover { transform: scale(1.1); }
-        .gyro-active { filter: hue-rotate(90deg) brightness(1.5); border-color: #2ecc71; }
+        .opponent-stat { color: #ff9f1c; text-shadow: 0 0 5px #ff9f1c; }
 
-        #settings-menu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        /* Sảnh chờ Multiplayer */
+        #mp-lobby {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(11, 12, 16, 0.95);
-            border: 2px solid #66fcf1;
-            border-radius: 12px;
-            padding: 25px;
-            width: 80%;
-            max-width: 320px;
-            z-index: 30;
-            display: none;
-            box-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 40;
         }
-        #settings-menu h2 { margin: 0 0 20px 0; text-align: center; text-shadow: 0 0 8px #66fcf1; }
-        .setting-row { margin-bottom: 20px; }
-        .setting-row label { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; }
-        input[type="range"] { width: 100%; accent-color: #45a29e; }
-        
-        #game-over { 
-            position: absolute; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: rgba(11, 12, 16, 0.9); 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 20;
-            display: none;
+        #mp-lobby h1 { font-size: 32px; color: #66fcf1; text-shadow: 0 0 15px #66fcf1; margin-bottom: 5px;}
+        #mp-lobby p { font-size: 16px; margin-bottom: 30px; color: #c5c6c7; }
+        .box {
+            background: #1f2833; padding: 20px; border-radius: 12px; border: 1px solid #45a29e;
+            width: 80%; max-width: 320px; text-align: center; margin-bottom: 15px;
         }
-        #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7; color: #c5c6c7; margin-bottom: 10px; text-align: center;}
-        #game-over p { font-size: 20px; margin-bottom: 30px; }
-        
+        .box h3 { margin: 0 0 10px 0; color: #45a29e; }
+        #my-id-display { font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #ff9f1c; margin-bottom: 10px; user-select: all;}
+        input[type="text"] {
+            width: 90%; padding: 10px; font-size: 16px; text-align: center;
+            background: #0b0c10; color: #66fcf1; border: 1px solid #45a29e; border-radius: 6px;
+            font-family: inherit; margin-bottom: 15px; text-transform: uppercase;
+        }
         button { 
-            padding: 12px 30px; 
-            font-size: 18px; font-weight: bold;
-            background: #1f2833; 
-            color: #66fcf1; 
-            border: 2px solid #66fcf1; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            box-shadow: 0 0 10px #66fcf1;
-            transition: 0.2s;
-            width: 100%;
+            padding: 12px 20px; font-size: 16px; font-weight: bold;
+            background: #1f2833; color: #66fcf1; border: 2px solid #66fcf1; 
+            border-radius: 8px; cursor: pointer; box-shadow: 0 0 10px #66fcf1;
+            transition: 0.2s; width: 100%; margin-bottom: 10px;
         }
         button:hover { background: rgba(102, 252, 241, 0.2); }
         button:active { background: #66fcf1; color: #0b0c10; }
+        .btn-orange { border-color: #ff9f1c; color: #ff9f1c; box-shadow: 0 0 10px #ff9f1c; }
+        .btn-orange:active { background: #ff9f1c; color: #0b0c10; }
 
-        /* Thông báo cảm biến */
-        #gyro-toast {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2ecc71;
-            color: #0b0c10;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 0.5s;
-            pointer-events: none;
-            z-index: 50;
+        #top-right-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; z-index: 15; }
+        .icon-btn {
+            font-size: 28px; cursor: pointer; transition: transform 0.2s, filter 0.2s;
+            text-shadow: 0 0 10px #66fcf1; user-select: none; background: rgba(11, 12, 16, 0.6);
+            border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center;
+            border: 1px solid #45a29e;
         }
+        .gyro-active { filter: hue-rotate(90deg) brightness(1.5); border-color: #2ecc71; }
+        
+        #game-over { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(11, 12, 16, 0.9); display: none; 
+            flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center;
+        }
+        #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7; color: #c5c6c7; margin-bottom: 10px;}
     </style>
 </head>
 <body>
+    <div id="mp-lobby">
+        <h1>NEON JUMPER</h1>
+        <p>Phiên bản WebRTC Multiplayer</p>
+        
+        <div class="box">
+            <h3>Mã Phòng Của Bạn</h3>
+            <div id="my-id-display">Đang tạo...</div>
+            <button id="copy-btn" style="font-size: 14px; padding: 8px;">📋 Cóp chép mã</button>
+        </div>
+
+        <div class="box">
+            <h3>Vào Phòng Bạn Bè</h3>
+            <input type="text" id="peer-id-input" placeholder="NHẬP MÃ PHÒNG">
+            <button id="connect-btn" class="btn-orange">Vào Phòng & Chơi</button>
+        </div>
+
+        <button id="solo-btn" style="width: 80%; max-width: 320px; border-color: #c5c6c7; color: #c5c6c7; box-shadow: none;">Chơi 1 Mình</button>
+    </div>
+
     <div id="ui-layer">
-        <div class="stat" id="score-display">Điểm: <span id="score">0</span></div>
-        <div class="stat">Chiều dài: <span id="length">1</span>x</div>
+        <div class="stat" id="score-display">Điểm của bạn: <span id="score">0</span></div>
+        <div class="stat opponent-stat" id="opp-score-container" style="display:none;">Đối thủ: <span id="opp-score">0</span></div>
+        <div class="stat" style="margin-top: 10px;">Chiều dài: <span id="length">1</span>x</div>
     </div>
 
     <div id="top-right-controls">
         <div class="icon-btn" id="gyro-btn" title="Bật Cảm Biến Nghiêng">📱</div>
-        <div class="icon-btn" id="settings-btn" title="Cài Đặt Vật Lý">⚙️</div>
-    </div>
-
-    <div id="gyro-toast">Đã Bật Cảm Biến Nghiêng!</div>
-
-    <div id="settings-menu">
-        <h2>TÙY CHỈNH VẬT LÝ</h2>
-        <div class="setting-row">
-            <label>Trọng lực (Rơi): <span id="grav-val">0.3</span></label>
-            <input type="range" id="grav-slider" min="0.05" max="1.0" step="0.05" value="0.3">
-        </div>
-        <div class="setting-row">
-            <label>Sức bật (Nhảy): <span id="jump-val">11</span></label>
-            <input type="range" id="jump-slider" min="5" max="25" step="0.5" value="11">
-        </div>
-        <button id="close-settings-btn">Đóng & Tiếp tục</button>
     </div>
 
     <div id="game-over">
-        <h1>TRẠM KHÔNG GIAN SỤP ĐỔ</h1>
-        <p>Thành tích: <span id="final-score">0</span> bậc</p>
+        <h1 id="go-title">TRẠM KHÔNG GIAN SỤP ĐỔ</h1>
+        <p style="font-size: 20px;">Thành tích: <span id="final-score">0</span> bậc</p>
         <button id="restart-btn" style="width: auto;">Phục Hồi Lại</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
     <script>
+        // --- HỆ THỐNG WEBRTC (P2P) ---
+        const peer = new Peer(); 
+        let conn = null;
+        let myPeerId = '';
+        let opponentData = null; // Dữ liệu của người chơi kia
+
+        peer.on('open', (id) => {
+            myPeerId = id.substring(0, 5).toUpperCase(); // Rút gọn ID cho dễ nhập
+            document.getElementById('my-id-display').innerText = myPeerId;
+            // Hack nhỏ để ghi đè ID ngắn vào server PeerJS (Chỉ dùng cho demo)
+            peer._id = myPeerId; 
+        });
+
+        // Khi có người kết nối tới mình (Mình là Host)
+        peer.on('connection', (connection) => {
+            conn = connection;
+            setupConnection();
+        });
+
+        document.getElementById('copy-btn').onclick = () => {
+            navigator.clipboard.writeText(myPeerId);
+            document.getElementById('copy-btn').innerText = "✅ Đã cóp chép";
+        };
+
+        // Khi bấm vào phòng bạn bè (Mình là Client)
+        document.getElementById('connect-btn').onclick = () => {
+            let targetId = document.getElementById('peer-id-input').value.toUpperCase().trim();
+            if(targetId) {
+                document.getElementById('connect-btn').innerText = "Đang kết nối...";
+                conn = peer.connect(targetId);
+                setupConnection();
+                
+                // Khi Client kết nối thành công, báo cho Host biết để Host tạo map
+                conn.on('open', () => {
+                    conn.send({ type: 'ready' });
+                });
+            }
+        };
+
+        function setupConnection() {
+            conn.on('data', (data) => {
+                if (data.type === 'ready') {
+                    // Host nhận 'ready', tạo Seed và gửi cho Client
+                    let seed = Math.floor(Math.random() * 99999);
+                    conn.send({ type: 'start', seed: seed });
+                    startGame(seed);
+                } 
+                else if (data.type === 'start') {
+                    // Client nhận lệnh bắt đầu
+                    startGame(data.seed);
+                } 
+                else if (data.type === 'update') {
+                    // Nhận tọa độ liên tục từ đối thủ
+                    opponentData = data.player;
+                    document.getElementById('opp-score').innerText = opponentData.score;
+                }
+                else if (data.type === 'dead') {
+                    opponentData.isDead = true;
+                }
+            });
+            
+            conn.on('close', () => { alert("Đối thủ đã ngắt kết nối!"); });
+        }
+
+        // --- BỘ TẠO SỐ NGẪU NHIÊN ĐỒNG BỘ (LCG) ---
+        // Giúp bản đồ của 2 người giống hệt nhau dựa trên chung 1 Seed
+        function LCG(seed) {
+            return function() {
+                seed = (seed * 1664525 + 1013904223) % 4294967296;
+                return seed / 4294967296;
+            }
+        }
+
+        document.getElementById('solo-btn').onclick = () => { startGame(Math.random()); };
+
+        // --- HỆ THỐNG GAME ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        let gravity = 0.3;         
-        let baseJump = 11;        
+        const gravity = 0.3;         
+        const baseJump = 11;        
         const PLATFORM_W = 95;       
         const PLATFORM_H = 12;
         const MIN_JUMP = 7.5;        
 
-        let player, platforms, score, isGameOver, isPaused, gameLoopId;
+        let player, platforms, score, isGameOver, gameLoopId;
+        let useGyro = false, gyroGamma = 0; 
         
-        // --- TRẠNG THÁI CẢM BIẾN ---
-        let useGyro = false;
-        let gyroGamma = 0; 
+        function startGame(seed) {
+            document.getElementById('mp-lobby').style.display = 'none';
+            if(conn && conn.open) document.getElementById('opp-score-container').style.display = 'block';
+            initGame(seed);
+        }
 
-        const settingsMenu = document.getElementById('settings-menu');
-        const gravSlider = document.getElementById('grav-slider');
-        const jumpSlider = document.getElementById('jump-slider');
-        const gravVal = document.getElementById('grav-val');
-        const jumpVal = document.getElementById('jump-val');
-        const gyroBtn = document.getElementById('gyro-btn');
-        const gyroToast = document.getElementById('gyro-toast');
-
-        function initGame() {
+        function initGame(seed) {
             score = 0;
             isGameOver = false;
-            isPaused = false;
+            opponentData = null;
             document.getElementById('game-over').style.display = 'none';
-            settingsMenu.style.display = 'none';
 
             player = {
-                x: canvas.width / 2 - 15,
-                y: canvas.height / 2,
-                targetX: canvas.width / 2 - 15,
-                w: 30, h: 30, vy: 0,
-                jumpPower: baseJump, level: 0,
+                x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15,
+                w: 30, h: 30, vy: 0, jumpPower: baseJump, level: 0,
                 squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1
             };
 
+            // Sinh trước 2000 bậc thang để đồng bộ hoàn hảo 2 máy
             platforms = [];
-            platforms.push({ 
-                x: canvas.width / 2 - PLATFORM_W / 2, 
-                y: canvas.height - 100, 
-                w: PLATFORM_W, h: PLATFORM_H, 
-                visited: true, dx: 0 
-            });
+            platforms.push({ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0 });
+            
+            let rng = LCG(seed);
+            let currentY = canvas.height - 100;
+            let simJump = baseJump;
+            let simScore = 0;
 
-            generatePlatforms(canvas.height);
+            for(let i = 0; i < 2000; i++) {
+                let maxSafeGap = ((simJump * simJump) / (2 * gravity)) * 0.75;
+                let minGap = Math.min(40, maxSafeGap * 0.5); 
+                currentY -= (rng() * (maxSafeGap - minGap) + minGap);
+                
+                let isMoving = rng() < 0.35 && i > 2;
+                let speed = isMoving ? (rng() > 0.5 ? 2.5 : -2.5) : 0;
+
+                platforms.push({ 
+                    x: rng() * (canvas.width - PLATFORM_W), 
+                    y: currentY, 
+                    w: PLATFORM_W, h: PLATFORM_H, 
+                    visited: false, dx: speed 
+                });
+
+                // Giả lập tiến hóa để thu hẹp map dần
+                simScore++;
+                if(Math.floor(simScore / 10) > Math.floor((simScore-1)/10)) {
+                    simJump -= 0.35;
+                    if(simJump < MIN_JUMP) simJump = MIN_JUMP;
+                }
+            }
+
             updateUI();
             cancelAnimationFrame(gameLoopId);
             loop();
-        }
-
-        function getMaxJumpHeight() {
-            let maxTheoretical = (player.jumpPower * player.jumpPower) / (2 * gravity);
-            return maxTheoretical * 0.75; 
-        }
-
-        function generatePlatforms(startY) {
-            let lastP = platforms[platforms.length - 1];
-            let currentY = lastP ? lastP.y : startY;
-            
-            while (currentY > -canvas.height) {
-                let maxSafeGap = getMaxJumpHeight();
-                let minGap = Math.min(40, maxSafeGap * 0.5); 
-                
-                let gapY = Math.random() * (maxSafeGap - minGap) + minGap;
-                currentY -= gapY;
-                
-                let maxX = canvas.width - PLATFORM_W;
-                let newX = Math.random() * maxX;
-                
-                let isMoving = Math.random() < 0.35 && platforms.length > 2;
-                let speed = isMoving ? (Math.random() > 0.5 ? 2.5 : -2.5) : 0;
-
-                platforms.push({ 
-                    x: newX, y: currentY, 
-                    w: PLATFORM_W, h: PLATFORM_H, 
-                    visited: false, dx: speed
-                });
-            }
-        }
-
-        function checkEvolution() {
-            let nextLevel = Math.floor(score / 10);
-            if (nextLevel > player.level) {
-                player.level = nextLevel;
-                player.h += 15; 
-                player.jumpPower = baseJump - (player.level * 0.35);
-                if (player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP; 
-            }
         }
 
         function updateUI() {
@@ -261,94 +257,45 @@
             document.getElementById('length').innerText = player.level + 1;
         }
 
-        // --- HỆ THỐNG YÊU CẦU QUYỀN GYROSCOPE ---
-        function handleOrientation(event) {
-            // Gamma là góc nghiêng trái/phải (từ -90 đến 90)
-            let gamma = event.gamma; 
-            if (gamma > 45) gamma = 45; // Giới hạn góc nghiêng để dễ kiểm soát
-            if (gamma < -45) gamma = -45;
+        // --- ĐIỀU KHIỂN CẢM BIẾN ---
+        const gyroBtn = document.getElementById('gyro-btn');
+        function handleOrientation(e) {
+            let gamma = e.gamma; 
+            if (gamma > 45) gamma = 45; if (gamma < -45) gamma = -45;
             gyroGamma = gamma;
         }
-
-        gyroBtn.addEventListener('click', () => {
+        gyroBtn.onclick = () => {
             if (useGyro) {
-                // Đang bật -> Tắt
-                useGyro = false;
-                gyroBtn.classList.remove('gyro-active');
+                useGyro = false; gyroBtn.classList.remove('gyro-active');
                 window.removeEventListener('deviceorientation', handleOrientation);
-                // Khôi phục targetX bằng x hiện tại để không bị giật
                 player.targetX = player.x; 
             } else {
-                // Yêu cầu quyền truy cập (Dành cho iOS/Trình duyệt bảo mật)
                 if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    DeviceOrientationEvent.requestPermission()
-                        .then(permissionState => {
-                            if (permissionState === 'granted') {
-                                enableGyro();
-                            } else {
-                                alert('Trình duyệt đã từ chối quyền truy cập cảm biến!');
-                            }
-                        })
-                        .catch(console.error);
-                } else {
-                    // Trình duyệt không yêu cầu xin quyền (như máy tính hoặc Android cũ)
-                    enableGyro();
-                }
+                    DeviceOrientationEvent.requestPermission().then(state => {
+                        if (state === 'granted') enableGyro();
+                    }).catch(console.error);
+                } else enableGyro();
             }
-        });
-
+        };
         function enableGyro() {
-            useGyro = true;
-            gyroBtn.classList.add('gyro-active');
+            useGyro = true; gyroBtn.classList.add('gyro-active');
             window.addEventListener('deviceorientation', handleOrientation);
-            
-            // Hiển thị thông báo
-            gyroToast.style.opacity = '1';
-            setTimeout(() => { gyroToast.style.opacity = '0'; }, 2000);
         }
 
-        // MENU XỬ LÝ
-        document.getElementById('settings-btn').addEventListener('click', () => {
-            isPaused = true;
-            settingsMenu.style.display = 'block';
-        });
-
-        document.getElementById('close-settings-btn').addEventListener('click', () => {
-            settingsMenu.style.display = 'none';
-            player.jumpPower = baseJump - (player.level * 0.35);
-            if (player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP; 
-            generatePlatforms(0); 
-            isPaused = false;
-            loop(); 
-        });
-
-        gravSlider.addEventListener('input', (e) => { gravity = parseFloat(e.target.value); gravVal.innerText = gravity.toFixed(2); });
-        jumpSlider.addEventListener('input', (e) => { baseJump = parseFloat(e.target.value); jumpVal.innerText = baseJump.toFixed(1); });
-
+        // --- VÒNG LẶP CHÍNH ---
         function loop() {
-            if (isGameOver || isPaused) return;
+            if (isGameOver) return;
 
-            // --- XỬ LÝ DI CHUYỂN BẰNG CẢM BIẾN ---
-            if (useGyro) {
-                // Biến đổi góc nghiêng thành tốc độ di chuyển
-                // Nghiêng 45 độ = tốc độ tối đa ~ 15px/frame
-                let moveAmount = (gyroGamma / 45) * 15; 
-                player.targetX = player.x + moveAmount;
-            }
-
-            // Mượt mà hóa chuyển động ngang
+            if (useGyro) player.targetX = player.x + ((gyroGamma / 45) * 15);
             player.x += (player.targetX - player.x) * (useGyro ? 0.8 : 0.4);
 
-            // Xuyên tường
             if (player.x > canvas.width) player.x = -player.w;
             if (player.x + player.w < 0) player.x = canvas.width;
 
             player.vy += gravity;
             player.y += player.vy;
 
-            // Animation khôi phục
             player.squash += (1.0 - player.squash) * 0.15;
-            
             if (player.flipAngle > 0) {
                 let spinSpeed = 0.25; 
                 player.angle += spinSpeed * player.flipDir;
@@ -356,9 +303,15 @@
                 if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; }
             }
 
-            for (let i = 0; i < platforms.length; i++) {
-                let p = platforms[i];
-                
+            // Đồng bộ dữ liệu P2P
+            if (conn && conn.open) {
+                conn.send({ 
+                    type: 'update', 
+                    player: { x: player.x, y: player.y, w: player.w, h: player.h, squash: player.squash, angle: player.angle, vy: player.vy, score: score } 
+                });
+            }
+
+            for (let p of platforms) {
                 if (p.dx !== 0) {
                     p.x += p.dx;
                     if (p.x < 0) { p.x = 0; p.dx *= -1; }
@@ -366,27 +319,20 @@
                 }
 
                 if (player.vy > 0) {
-                    let playerBottom = player.y + player.h;
-                    let prevPlayerBottom = playerBottom - player.vy;
-                    
-                    if (playerBottom >= p.y && prevPlayerBottom <= p.y + p.h) {
+                    if (player.y + player.h >= p.y && player.y + player.h - player.vy <= p.y + p.h) {
                         if (player.x + player.w > p.x - 5 && player.x < p.x + p.w + 5) {
                             player.vy = -player.jumpPower; 
-                            player.squash = 0.4; 
-                            player.flipAngle = Math.PI * 2; 
-                            player.angle = 0;
-                            
-                            // Lộn vòng theo hướng đang nghiêng hoặc hướng chuột
-                            if (useGyro) {
-                                player.flipDir = (gyroGamma > 0) ? 1 : -1;
-                            } else {
-                                player.flipDir = (player.targetX > player.x) ? 1 : -1;
-                            }
+                            player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0;
+                            player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
                             
                             if (!p.visited) {
-                                p.visited = true;
-                                score++;
-                                checkEvolution();
+                                p.visited = true; score++;
+                                let nextLvl = Math.floor(score / 10);
+                                if (nextLvl > player.level) {
+                                    player.level = nextLvl; player.h += 15; 
+                                    player.jumpPower -= 0.35;
+                                    if(player.jumpPower < MIN_JUMP) player.jumpPower = MIN_JUMP;
+                                }
                                 updateUI();
                             }
                         }
@@ -395,14 +341,15 @@
             }
 
             const cameraThreshold = canvas.height / 2;
+            let camDiff = 0;
             if (player.y < cameraThreshold) {
-                let diff = cameraThreshold - player.y;
+                camDiff = cameraThreshold - player.y;
                 player.y = cameraThreshold;
-                platforms.forEach(p => p.y += diff);
+                platforms.forEach(p => p.y += camDiff);
+                
+                // Đồng bộ camera của bóng ma đối thủ
+                if(opponentData) opponentData.y += camDiff;
             }
-
-            platforms = platforms.filter(p => p.y < canvas.height + 100);
-            if (platforms[platforms.length - 1].y > 0) generatePlatforms(0);
 
             if (player.y > canvas.height) { gameOver(); return; }
 
@@ -410,89 +357,79 @@
             gameLoopId = requestAnimationFrame(loop);
         }
 
-        function draw() {
-            ctx.fillStyle = '#0b0c10';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            for (let p of platforms) {
-                if (!p.visited) {
-                    if (p.dx !== 0) {
-                        ctx.fillStyle = '#f72585';
-                        ctx.shadowBlur = 15;
-                        ctx.shadowColor = '#f72585';
-                    } else {
-                        ctx.fillStyle = '#45a29e';
-                        ctx.shadowBlur = 15;
-                        ctx.shadowColor = '#66fcf1';
-                    }
-                } else {
-                    ctx.fillStyle = '#1f2833';
-                    ctx.shadowBlur = 0;
-                }
-                ctx.fillRect(p.x, p.y, p.w, p.h);
-            }
-
+        function drawEntity(entity, colorMain, isGhost = false) {
             ctx.save(); 
-            let cx = player.x + player.w / 2;
-            let cy = player.y + player.h / 2;
+            let cx = entity.x + entity.w / 2;
+            let cy = entity.y + entity.h / 2;
             ctx.translate(cx, cy);
-            ctx.rotate(player.angle);
-            ctx.scale(2 - player.squash, player.squash);
+            ctx.rotate(entity.angle);
+            ctx.scale(2 - entity.squash, entity.squash);
 
-            ctx.fillStyle = '#66fcf1';
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = '#66fcf1';
-            ctx.fillRect(-player.w / 2, -player.h / 2, player.w, player.h);
+            if (isGhost) ctx.globalAlpha = 0.4; // Làm mờ bóng ma
+
+            ctx.fillStyle = colorMain;
+            ctx.shadowBlur = isGhost ? 10 : 20;
+            ctx.shadowColor = colorMain;
+            ctx.fillRect(-entity.w / 2, -entity.h / 2, entity.w, entity.h);
             
             ctx.fillStyle = '#0b0c10';
             ctx.shadowBlur = 0;
-            ctx.fillRect(-player.w / 2 + 6, -player.h / 2 + 6, player.w - 12, 6);
+            ctx.fillRect(-entity.w / 2 + 6, -entity.h / 2 + 6, entity.w - 12, 6);
 
-            let handOffset = -player.vy * 1.5; 
-            if (handOffset < -18) handOffset = -18;
-            if (handOffset > 10) handOffset = 10;
+            let handOffset = -entity.vy * 1.5; 
+            if (handOffset < -18) handOffset = -18; if (handOffset > 10) handOffset = 10;
+            ctx.fillStyle = isGhost ? colorMain : '#45a29e';
+            ctx.fillRect(-entity.w / 2 - 12, handOffset - 6, 8, 12);
+            ctx.fillRect(entity.w / 2 + 4, handOffset - 6, 8, 12);
 
-            ctx.fillStyle = '#45a29e';
-            ctx.shadowBlur = 10;
-            ctx.fillRect(-player.w / 2 - 12, handOffset - 6, 8, 12);
-            ctx.fillRect(player.w / 2 + 4, handOffset - 6, 8, 12);
+            ctx.restore();
+        }
 
-            ctx.restore(); 
+        function draw() {
+            ctx.fillStyle = '#0b0c10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Chỉ vẽ những bậc thang nằm trong vùng hiển thị
+            for (let p of platforms) {
+                if(p.y > canvas.height + 50 || p.y < -50) continue; 
+                
+                if (!p.visited) {
+                    if (p.dx !== 0) { ctx.fillStyle = '#f72585'; ctx.shadowBlur = 15; ctx.shadowColor = '#f72585'; } 
+                    else { ctx.fillStyle = '#45a29e'; ctx.shadowBlur = 15; ctx.shadowColor = '#66fcf1'; }
+                } else { ctx.fillStyle = '#1f2833'; ctx.shadowBlur = 0; }
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+            }
+
+            // Vẽ đối thủ (Màu Cam) nếu có kết nối
+            if (opponentData && !opponentData.isDead) {
+                drawEntity(opponentData, '#ff9f1c', true);
+            }
+
+            // Vẽ bản thân (Màu Xanh Cyan)
+            drawEntity(player, '#66fcf1', false);
         }
 
         function gameOver() {
             isGameOver = true;
+            if (conn && conn.open) conn.send({ type: 'dead' });
+            
             document.getElementById('final-score').innerText = score;
+            
+            let title = "TRẠM KHÔNG GIAN SỤP ĐỔ";
+            if (opponentData) {
+                if(opponentData.isDead) title = "BẠN ĐÃ THẮNG! 🏆";
+                else title = "BẠN ĐÃ THUA... 💀";
+            }
+            document.getElementById('go-title').innerText = title;
             document.getElementById('game-over').style.display = 'flex';
         }
 
-        function handleMovement(xClient) {
-            // Chỉ nhận điều khiển cảm ứng/chuột nếu chưa bật cảm biến Gyro
-            if(!isPaused && !isGameOver && !useGyro) {
-                player.targetX = xClient - player.w / 2;
-            }
-        }
-
-        canvas.addEventListener('touchmove', (e) => {
-            if(e.target.tagName !== 'INPUT' && !e.target.classList.contains('icon-btn')) e.preventDefault();
-            handleMovement(e.touches[0].clientX);
-        }, {passive: false});
-
-        canvas.addEventListener('touchstart', (e) => {
-            if(e.target.tagName !== 'INPUT' && !e.target.classList.contains('icon-btn')) e.preventDefault();
-            handleMovement(e.touches[0].clientX);
-        }, {passive: false});
-
+        function handleMovement(xClient) { if(!isGameOver && !useGyro) player.targetX = xClient - player.w / 2; }
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
 
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-
-        document.getElementById('restart-btn').addEventListener('click', initGame);
-
-        initGame();
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+        document.getElementById('restart-btn').addEventListener('click', () => { window.location.reload(); });
     </script>
 </body>
 </html>
