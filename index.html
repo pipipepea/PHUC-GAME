@@ -167,15 +167,7 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // --- LỚP BẢO MẬT: KHÓA TÊN MIỀN & GIẢI MÃ API ẨN ---
-        // (Cậu chủ có thể thay đổi domain được phép ở biến dưới nếu đưa lên web riêng)
-        const allowedDomain = ""; 
-        if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" && allowedDomain !== "" && !window.location.hostname.endsWith(allowedDomain)) {
-            document.body.innerHTML = "<h1 style='color:#66fcf1; text-align:center; margin-top:40vh; font-family:monospace;'>BẢN QUYỀN THUỘC VỀ P&T - KHÔNG SAO CHÉP</h1>";
-            throw new Error("Unauthorized execution.");
-        }
-
-        // Giải mã URL Google Sheets từ Base64 để chống soi code trực tiếp
+        // Giải mã URL Google Sheets từ Base64 an toàn tuyệt đối trên GitHub Pages
         const GOOGLE_SHEET_URL = atob("aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J4WnJZTjA2OTBQcU9yUWRkZU9Fc2pvUjl4dlQtUkFtX19wS0pfc3puU2lLV0t5b2V5UjkteXJueDRpdkF4Z1M2QkRTdy9leGVj");
 
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
@@ -250,7 +242,6 @@
         function submitScore(name, score) {
             if (!GOOGLE_SHEET_URL || score <= 0) return;
             let safeName = encodeURIComponent(name);
-            // Tạo mã Token dựa trên điểm số và chuỗi khóa bí mật
             let token = btoa(score + "_PT_SECRET_2026");
             let fetchUrl = `${GOOGLE_SHEET_URL}?action=add&name=${safeName}&score=${score}&token=${token}`;
             
@@ -340,7 +331,7 @@
             const toast = document.getElementById('toast-msg');
             toast.innerText = text; toast.style.color = color; toast.style.textShadow = `0 0 20px ${color}`;
             toast.style.opacity = '1'; toast.style.transform = 'translate(-50%, -80%) scale(1.2)';
-            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, -50%) scale(1); }, 2000);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, -50%) scale(1)'; }, 2000);
         }
 
         function setupConnection() {
@@ -584,7 +575,6 @@
         }
 
         function handleMovement(xClient) { if(!isGameOver && !useGyro && !player.isDead) player.targetX = xClient - player.w / 2; }
-        canvas.addEventListener('touchmock', (e) => {}, {passive: false});
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
