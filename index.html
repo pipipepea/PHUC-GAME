@@ -85,7 +85,17 @@
         .lb-score { color: #2ecc71; font-weight: bold; }
         .lb-loading { color: #c5c6c7; font-style: italic; margin: 20px 0; }
 
-        .footer-credit { position: absolute; bottom: 15px; width: 100%; text-align: center; font-size: 14px; color: #45a29e; letter-spacing: 3px; font-weight: bold; text-shadow: 0 0 5px rgba(69, 162, 158, 0.5); pointer-events: none; }
+        /* HIỆU ỨNG NEON SÁNG DẦN VÀ TẮT DẦN CHO CHỮ KÝ */
+        @keyframes creditPulse {
+            0% { opacity: 0.2; text-shadow: 0 0 2px #45a29e; }
+            50% { opacity: 1; text-shadow: 0 0 15px #66fcf1, 0 0 25px #66fcf1; }
+            100% { opacity: 0.2; text-shadow: 0 0 2px #45a29e; }
+        }
+        .footer-credit { 
+            position: absolute; bottom: 35px; width: 100%; text-align: center; 
+            font-size: 15px; color: #66fcf1; letter-spacing: 3px; font-weight: bold; 
+            animation: creditPulse 2.5s infinite ease-in-out; pointer-events: none; 
+        }
     </style>
 </head>
 <body>
@@ -149,7 +159,8 @@
     <div id="game-over">
         <h1 id="go-title">VUI LÀ CHÍNH</h1>
         <p style="font-size: 20px;">Thành tích lượt này: <span id="final-score">0</span></p>
-        <p style="font-size: 18px; color: #f72585; font-weight:bold; margin-bottom: 25px; text-shadow: 0 0 10px rgba(247,37,133,0.5);">🏆 Kỷ Lục Cá Nhân: <span id="go-highscore">0</span></p>
+        <p style="font-size: 18px; color: #f72585; font-weight:bold; margin-bottom: 15px; text-shadow: 0 0 10px rgba(247,37,133,0.5);">🏆 Kỷ Lục Cá Nhân: <span id="go-highscore">0</span></p>
+        <p id="pc-encouragement" style="font-size: 15px; color: #66fcf1; text-shadow: 0 0 8px #66fcf1; margin-bottom: 20px; display: none;">Bạn đã làm rất tốt, chơi trên điện thoại dễ hơn nhiều!</p>
         <button id="restart-btn" class="btn-orange" style="width: auto;">Chơi Lại Cùng Nhau</button>
         <button id="home-btn" class="btn-gray" style="width: auto;">Về Sảnh Chờ</button>
     </div>
@@ -160,9 +171,9 @@
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
         canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
-        // --- CHIỀU RỘNG THANH BẬC NHẠY THÍCH ỨNG (PC KÉO DÀI 40%, MOBILE THU NGẮN 40%) ---
+        // --- KÉO DÀI BẬC TRÊN PC THÊM 20% (TỔNG CỘNG 1.68 LẦN) ---
         const basePlatformW = 95;
-        const PLATFORM_W = window.innerWidth >= 768 ? basePlatformW * 1.4 : basePlatformW * 0.6;
+        const PLATFORM_W = window.innerWidth >= 768 ? basePlatformW * 1.68 : basePlatformW * 0.6;
 
         // --- HOẠT ẢNH LOBBY ---
         let lobbyAnimId;
@@ -555,7 +566,16 @@
             isGameOver = true; let finalScore = score;
             if (score > myHighScore) { myHighScore = score; localStorage.setItem('neonJumperHighScore', myHighScore); document.getElementById('lobby-highscore').innerText = myHighScore; submitScore(myName, myHighScore); }
             if (opponentData && opponentData.score > score) finalScore = opponentData.score;
-            document.getElementById('final-score').innerText = finalScore; document.getElementById('go-highscore').innerText = myHighScore; document.getElementById('game-over').style.display = 'flex';
+            document.getElementById('final-score').innerText = finalScore; document.getElementById('go-highscore').innerText = myHighScore;
+            
+            // Hiển thị lời động viên nếu chơi trên PC
+            if (window.innerWidth >= 768) {
+                document.getElementById('pc-encouragement').style.display = 'block';
+            } else {
+                document.getElementById('pc-encouragement').style.display = 'none';
+            }
+
+            document.getElementById('game-over').style.display = 'flex';
         }
 
         function handleMovement(xClient) { if(!isGameOver && !useGyro && !player.isDead) player.targetX = xClient - player.w / 2; }
