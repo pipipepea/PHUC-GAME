@@ -6,13 +6,16 @@ function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, c
     if (!isFriend) { if (hOffset < -18) hOffset = -18; if (hOffset > 10) hOffset = 10; }
     ctx.fillStyle = '#45a29e'; ctx.fillRect(-w / 2 - 12, hOffset - 6, 8, 12); ctx.fillRect(w / 2 + 4, hOffset - 6, 8, 12);
 
-    // --- VẼ EMOJI KHUÔN MẶT LÊN ĐẦU NHÂN VẬT ---
-    ctx.font = "14px Arial";
+    // --- VẼ EMOJI: TO HƠN 1.5 LẦN (21px) VÀ NẰM CỐ ĐỊNH TRÊN ĐỈNH ĐẦU ---
+    ctx.save();
+    ctx.font = "21px Arial";
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.textBaseline = "bottom";
     ctx.shadowBlur = 0; 
-    ctx.fillText(currentEmoji || "😎", 0, -2);
-    // ------------------------------------------
+    let emojiY = -h / 2 - 4; 
+    ctx.fillText(currentEmoji || "😎", 0, emojiY);
+    ctx.restore();
+    // -----------------------------------------------------------------
 
     ctx.restore();
 }
@@ -142,7 +145,7 @@ function lobbyLoop() {
     lobbyFriend.angle = Math.sin(Date.now() / 300) * 0.1;
      
     drawEntityRaw(ctx, lobbyPlayer.x, lobbyPlayer.y, lobbyPlayer.w, lobbyPlayer.h, lobbyPlayer.angle, lobbyPlayer.vy, '#66fcf1', false, "😎");
-    drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.w, lobbyFriend.h, lobbyFriend.angle, 0, '#ff9f1c', true, "🤖");
+    drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.h ? lobbyFriend.w : 30, lobbyFriend.h || 30, lobbyFriend.angle, 0, '#ff9f1c', true, "🤖");
      
     lobbyAnimId = requestAnimationFrame(lobbyLoop);
 }
