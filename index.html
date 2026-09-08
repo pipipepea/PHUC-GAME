@@ -18,6 +18,7 @@
         .mic-stat { color: #ff0055; text-shadow: 0 0 8px #ff0055; font-size: 18px; margin-top: 10px;}
         .heart-stat { color: #f72585; text-shadow: 0 0 10px #f72585; font-size: 20px; margin-top: 5px; letter-spacing: 2px;}
         .rocket-stat { color: #ff5500; text-shadow: 0 0 10px #ff5500; font-size: 18px; margin-top: 5px;}
+        .sword-stat { color: #e74c3c; text-shadow: 0 0 10px #e74c3c; font-size: 18px; margin-top: 5px;}
 
         #mp-lobby { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: transparent; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 40; pointer-events: none;}
         
@@ -161,6 +162,7 @@
         <div class="stat opponent-stat" id="opp-score-container" style="display:none;"><span id="opp-name">Đồng đội</span>: <span id="opp-score">0</span></div>
         <div class="stat heart-stat" id="heart-display">❤️: <span id="heart-count">1</span>/4</div>
         <div class="stat rocket-stat" id="rocket-counter">🚀 Tên lửa: <span id="rocket-count">0</span>/6</div>
+        <div class="stat sword-stat" id="sword-counter" style="display:none;">⚔️ Cuồng Sát: <span id="sword-status">TẮT</span></div>
         <div class="stat mic-stat" id="mic-counter">🎤: 0/3</div>
     </div>
     
@@ -182,7 +184,7 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // URL Google Apps Script chính thức[cite: 1]
+        // URL Google Apps Script chính thức
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxZrYN0690PqOrQddeOEsjoR9xvT-RAm__pKJ_sznSlKWKyoeyR9-yrnx4ivAxgS6BDSw/exec";
 
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
@@ -253,7 +255,7 @@
         }
         lobbyLoop();
 
-        // --- GỬI ĐIỂM CÓ KÈM MÃ TOKEN BẢO MẬT CHỐNG HACK[cite: 1] ---
+        // --- GỬI ĐIỂM CÓ KÈM MÃ TOKEN BẢO MẬT CHỐNG HACK ---
         function submitScore(name, score) {
             if (!GOOGLE_SHEET_URL || score <= 0) return;
             let safeName = encodeURIComponent(name);
@@ -302,7 +304,7 @@
         let myPeerId = generateId(); 
         let peer = new Peer(myPeerId); 
         let conn = null, opponentData = null; 
-        let oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0 }; 
+        let oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0, berserkTimer: 0, trail: [] }; 
 
         function initPeerEvents(p) {
             p.on('open', (id) => { document.getElementById('my-id-display').innerText = id; });
@@ -369,7 +371,6 @@
                     document.getElementById('opp-score').innerText = opponentData.score; 
                 }
                 else if (data.type === 'revive') { 
-                    // Hồi sinh ngay tại vị trí hiện tại của người chơi còn lại vừa ăn tim, trừ 20 điểm
                     player.isDead = false; 
                     player.vy = -baseJump * 1.5; 
                     if (opponentData) {
@@ -382,6 +383,14 @@
                 }
                 else if (data.type === 'slow') { 
                     slowTime = 300; 
+                }
+                else if (data.type === 'kill') {
+                    if (!player.isDead) {
+                        player.isDead = true;
+                        player.h = 30; player.colorStage = 0; player.jumpPower = baseJump;
+                        spawnExplosion(player.x + 15, player.y + 15, '#e74c3c');
+                        showToast("⚔️ BẠN ĐÃ CHẠM PHẢI DẢI ĐUÔI CUỒNG SÁT! ⚔️", "#e74c3c");
+                    }
                 }
             });
             conn.on('close', () => { alert("Đồng đội đã ngắt kết nối!"); window.location.reload(); });
@@ -401,15 +410,11 @@
 
         const gravity = 0.3; const baseJump = 11; const PLATFORM_H = 12; const MIN_JUMP = 7.5;        
         let player, platforms, score, isGameOver, gameLoopId, useGyro = false, gyroGamma = 0, cameraOffset = 0; 
-        let slowTime = 0, particles = [], trailParticles = [], micTimeRemaining = 0; 
+        let slowTime = 0, particles = [], trailPoints = [], micTimeRemaining = 0; 
         let isSoloMode = false; 
 
         function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
-        
-        function addTrail(x, y, color) {
-            trailParticles.push({ x: x + 15, y: y + 15, life: 1.0, color: color });
-        }
 
         function startCountdown(seed, solo = false) {
             isLobby = false; cancelAnimationFrame(lobbyAnimId);
@@ -446,31 +451,35 @@
                 document.getElementById('opp-score-container').style.display = 'none';
                 document.getElementById('heart-display').style.display = 'block';
                 document.getElementById('rocket-counter').style.display = 'block';
+                document.getElementById('sword-counter').style.display = 'none';
             } else {
                 document.getElementById('opp-score-container').style.display = 'block';
                 document.getElementById('heart-display').style.display = 'none'; 
                 document.getElementById('rocket-counter').style.display = 'block';
+                document.getElementById('sword-counter').style.display = 'block';
             }
 
             initGame(seed);
         }
 
         function initGame(seed) {
-            score = 0; isGameOver = false; cameraOffset = 0; particles = []; trailParticles = []; slowTime = 0; micTimeRemaining = 0;
-            opponentData = null; oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0 }; 
+            score = 0; isGameOver = false; cameraOffset = 0; particles = []; trailPoints = []; slowTime = 0; micTimeRemaining = 0;
+            opponentData = null; oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0, berserkTimer: 0, trail: [] }; 
 
             player = { 
                 x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, 
                 w: 30, h: 30, vy: 0, jumpPower: baseJump, colorStage: 0, squash: 1.0, angle: 0, 
                 flipAngle: 0, flipDir: 1, isDead: false, webTarget: null, micCount: 0, 
-                hearts: 1, heartAccumulator: 0, rocketCount: 0, rocketFlying: false, rocketStepsLeft: 0 
+                hearts: 1, heartAccumulator: 0, rocketCount: 0, rocketFlying: false, rocketStepsLeft: 0,
+                berserkTimer: 0 
             };
             document.getElementById('mic-counter').innerText = `🎤: 0/3`;
             document.getElementById('heart-count').innerText = player.hearts;
             document.getElementById('rocket-count').innerText = player.rocketCount;
+            document.getElementById('sword-status').innerText = "TẮT";
 
             platforms = [];
-            platforms.push({ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0, hp: 6, hasRevive: false, hasShrink: false, hasSnow: false, hasWeb: false, hasMic: false, hasRocket: false, broken: false });
+            platforms.push({ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0, hp: 6, hasRevive: false, hasShrink: false, hasSnow: false, hasWeb: false, hasMic: false, hasRocket: false, hasSword: false, broken: false });
             
             let rng = LCG(seed); let currentY = canvas.height - 100; let simJump = baseJump; let simScore = 0;
 
@@ -485,16 +494,19 @@
                 let hasWeb = (rng() < 0.05) && !hasHeart && !hasShrink && !hasSnow && i > 20;
                 let hasMic = (rng() < 0.12) && !hasHeart && !hasShrink && !hasSnow && !hasWeb; 
                 let hasRocket = (rng() < 0.08) && !hasHeart && !hasShrink && !hasSnow && !hasWeb && !hasMic && i > 5; 
+                let hasSword = (rng() < 0.03) && !hasHeart && !hasShrink && !hasSnow && !hasWeb && !hasMic && !hasRocket && i > 25; 
 
                 let p1X = rng() * (canvas.width - PLATFORM_W);
-                platforms.push({ x: p1X, y: currentY, w: PLATFORM_W, h: PLATFORM_H, hp: hp, broken: false, visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink, hasSnow: hasSnow, hasWeb: hasWeb, hasMic: hasMic, hasRocket: hasRocket });
+                platforms.push({ x: p1X, y: currentY, w: PLATFORM_W, h: PLATFORM_H, hp: hp, broken: false, visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink, hasSnow: hasSnow, hasWeb: hasWeb, hasMic: hasMic, hasRocket: hasRocket, hasSword: hasSword });
                 if (rng() < 0.7) {
                     let p2X = (p1X + canvas.width / 2) % (canvas.width - PLATFORM_W); let p2Y = currentY + (rng() * 40 - 20); 
-                    platforms.push({ x: p2X, y: p2Y, w: PLATFORM_W, h: PLATFORM_H, hp: 6, broken: false, visited: false, dx: 0, hasRevive: false, hasShrink: false, hasSnow: false, hasWeb: false, hasMic: false, hasRocket: false });
+                    platforms.push({ x: p2X, y: p2Y, w: PLATFORM_W, h: PLATFORM_H, hp: 6, broken: false, visited: false, dx: 0, hasRevive: false, hasShrink: false, hasSnow: false, hasWeb: false, hasMic: false, hasRocket: false, hasSword: false });
                 }
                 simScore++; if(Math.floor(simScore / 20) > Math.floor((simScore-1)/20)) { simJump -= 0.35; if(simJump < MIN_JUMP) simJump = MIN_JUMP; }
             }
-            document.getElementById('score').innerText = score; cancelAnimationFrame(gameLoopId); loop();
+            document.getElementById('score').innerText = score; 
+            cancelAnimationFrame(gameLoopId); 
+            loop(); 
         }
 
         const gyroBtn = document.getElementById('gyro-btn');
@@ -547,6 +559,16 @@
             if (isGameOver) return;
             if (slowTime > 0) slowTime--; if (micTimeRemaining > 0) micTimeRemaining--;
 
+            if (player.berserkTimer > 0) {
+                player.berserkTimer--;
+                let secondsLeft = Math.ceil(player.berserkTimer / 60);
+                document.getElementById('sword-status').innerText = `${secondsLeft}s`;
+                if (player.berserkTimer === 0) {
+                    document.getElementById('sword-status').innerText = "TẮT";
+                    showToast("⚔️ HẾT THỜI GIAN CUỒNG SÁT! ⚔️", "#66fcf1");
+                }
+            }
+
             if (micTimeRemaining > 0 && micPermissionGranted && !player.isDead) {
                 analyser.getByteFrequencyData(dataArray);
                 let sum = 0; for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
@@ -564,6 +586,22 @@
                 oppRender.isDead = opponentData.isDead; 
                 oppRender.h = opponentData.h; 
                 oppRender.colorStage = opponentData.colorStage;
+                oppRender.berserkTimer = opponentData.berserkTimer;
+                oppRender.trail = opponentData.trail || [];
+            }
+
+            // Kiểm tra va chạm với dải đuôi sáng cuồng sát của đối thủ (đối thủ đang kích hoạt berserk)
+            if (!player.isDead && opponentData && opponentData.berserkTimer > 0 && opponentData.trail && opponentData.trail.length > 0) {
+                for (let pt of opponentData.trail) {
+                    let screenPtY = pt.y + cameraOffset;
+                    let dist = Math.hypot((player.x + 15) - pt.x, (player.y + 15) - screenPtY);
+                    if (dist < 22) {
+                        if (conn && conn.open) {
+                            conn.send({ type: 'kill' });
+                        }
+                        break;
+                    }
+                }
             }
 
             if (!player.isDead) {
@@ -585,7 +623,8 @@
                     player.x += (player.targetX - player.x) * (useGyro ? 0.85 : 0.5);
                     if (player.x > canvas.width) player.x = -player.w; if (player.x + player.w < 0) player.x = canvas.width;
                     player.vy += gravity; player.y += player.vy; player.squash += (1.0 - player.squash) * 0.15;
-                    if (player.flipAngle > 0) { let spinSpeed = 0.25; player.angle += spinSpeed * player.flipDir; player.flipAngle -= spinSpeed; if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; } }
+                    
+                    if (player.flipAngle > 0) { let spinSpeed = 0.08; player.angle += spinSpeed * player.flipDir; player.flipAngle -= spinSpeed; if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; } }
 
                     if (player.y > canvas.height) {
                         if (isSoloMode || !conn || !conn.open) {
@@ -615,10 +654,14 @@
                 }
             }
 
-            for (let t = trailParticles.length - 1; t >= 0; t--) {
-                let tp = trailParticles[t];
-                tp.life -= 0.05;
-                if (tp.life <= 0) trailParticles.splice(t, 1);
+            // Cập nhật dải đuôi sáng uốn lượn mượt mà (dài 30 điểm cho độ uyển chuyển cao)
+            if (!player.isDead) {
+                trailPoints.unshift({ x: player.x + 15, y: player.y + 15 });
+                while (trailPoints.length > 30) {
+                    trailPoints.pop();
+                }
+            } else {
+                if (trailPoints.length > 0) trailPoints.pop();
             }
 
             for (let i = particles.length - 1; i >= 0; i--) { let pt = particles[i]; pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.04; if (pt.life <= 0) particles.splice(i, 1); }
@@ -636,7 +679,9 @@
                         isDead: player.isDead, 
                         score: score, 
                         h: player.h, 
-                        colorStage: player.colorStage 
+                        colorStage: player.colorStage,
+                        berserkTimer: player.berserkTimer,
+                        trail: trailPoints.map(pt => ({ x: pt.x, y: pt.y - cameraOffset })) // Gửi tọa độ thế giới của đuôi để đồng đội check va chạm
                     } 
                 }); 
             }
@@ -673,6 +718,13 @@
                                 } else {
                                     showToast(`🚀 ĐÃ THU TÊN LỬA (${player.rocketCount}/6)! 🚀`, "#ff5500");
                                 }
+                            }
+
+                            if (p.hasSword) {
+                                p.hasSword = false;
+                                player.berserkTimer = 300; // 5 giây
+                                spawnExplosion(p.x + p.w / 2, p.y - 15, '#e74c3c');
+                                showToast("⚔️ ĐÃ VÀO CHẾ ĐỘ CUỒNG SÁT! ĐUÔI SÁNG SÁT THƯƠNG! ⚔️", "#e74c3c");
                             }
 
                             if (p.hasRevive) { 
@@ -731,8 +783,6 @@
                                 player.angle = 0; 
                                 player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
                                 
-                                addTrail(player.x, player.y, getPlayerColor(player.colorStage));
-
                                 if (!p.visited) { 
                                     p.visited = true; 
                                     score += (useGyro ? 2 : 1); 
@@ -764,6 +814,14 @@
             }
             let colorMain = isOpponent ? '#ff9f1c' : getPlayerColor(entity.colorStage);
             drawEntityRaw(ctx, entity.x + 15, entity.y + (entity.h || 30) / 2, 30, entity.h || 30, entity.angle, entity.vy, colorMain, false);
+            
+            if (entity.berserkTimer > 0) {
+                ctx.save();
+                ctx.font = "16px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("⚔️", entity.x + 15, entity.y - 15);
+                ctx.restore();
+            }
         }
 
         function drawRadar() {
@@ -779,22 +837,57 @@
             }
         }
 
+        // Hàm vẽ dải đuôi uốn lượn mượt mà cho một thực thể (dùng chung cho cả mình và đồng đội)
+        function drawTrailFor(points, colorStage, berserkTimer, isOpponent = false) {
+            if (!points || points.length < 2) return;
+            ctx.save();
+            let baseColor = isOpponent ? '#ff9f1c' : getPlayerColor(colorStage);
+            let finalColor = baseColor;
+            
+            if (berserkTimer > 0) {
+                let blink = Math.floor(Date.now() / 100) % 2 === 0;
+                finalColor = blink ? '#e74c3c' : baseColor;
+            }
+
+            for (let i = 0; i < points.length - 1; i++) {
+                let p1 = points[i];
+                let p2 = points[i + 1];
+                let progress = i / points.length; // 0 đến 1 (từ đầu tới đuôi)
+                
+                // Thêm độ uốn lượn uyển chuyển bằng hàm sóng sin dựa trên thời gian và vị trí điểm
+                let wave = Math.sin(Date.now() / 100 + i * 0.4) * (2 * (1 - progress));
+                
+                ctx.beginPath();
+                ctx.moveTo(p1.x + wave, p1.y);
+                ctx.lineTo(p2.x + wave, p2.y);
+                
+                ctx.lineWidth = Math.max(0.5, (1 - progress) * 7); // Thu nhỏ dần ở đuôi
+                ctx.strokeStyle = finalColor;
+                ctx.globalAlpha = Math.max(0.03, 1 - progress); // Mờ dần về phía cuối
+                ctx.shadowBlur = 15 * (1 - progress);
+                ctx.shadowColor = finalColor;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
         function draw() {
             ctx.fillStyle = '#0b0c10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             if (slowTime > 0) { ctx.fillStyle = "rgba(0, 200, 255, 0.08)"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
             if (micTimeRemaining > 0) { ctx.fillStyle = "rgba(255, 0, 85, 0.1)"; ctx.fillRect(0, 0, canvas.width, canvas.height); } 
 
-            trailParticles.forEach(tp => {
-                ctx.save();
-                ctx.globalAlpha = tp.life * 0.7;
-                ctx.fillStyle = tp.color;
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = tp.color;
-                ctx.beginPath();
-                ctx.arc(tp.x, tp.y, 9 * tp.life, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            });
+            // Vẽ đuôi của mình
+            if (!player.isDead) {
+                drawTrailFor(trailPoints, player.colorStage, player.berserkTimer, false);
+            }
+
+            // Vẽ đuôi của đồng đội
+            if (opponentData && !opponentData.isDead && opponentData.trail) {
+                // Đổi tọa độ trail của đối thủ theo cameraOffset hiện tại của mình
+                let adjustedOppTrail = opponentData.trail.map(pt => ({ x: pt.x, y: pt.y + cameraOffset }));
+                drawTrailFor(adjustedOppTrail, opponentData.colorStage, opponentData.berserkTimer, true);
+            }
 
             for (let p of platforms) {
                 if(p.y > canvas.height + 50 || p.y < -50 || p.broken) continue; 
@@ -807,6 +900,7 @@
                 ctx.font = "24px Arial";
                 if (p.hasMic) { ctx.shadowBlur = 15; ctx.shadowColor = '#ff0055'; ctx.fillText("🎤", p.x + p.w / 2, p.y - 15 + bounce); }
                 else if (p.hasRocket) { ctx.shadowBlur = 15; ctx.shadowColor = '#ff5500'; ctx.fillText("🚀", p.x + p.w / 2, p.y - 15 + bounce); }
+                else if (p.hasSword) { ctx.shadowBlur = 15; ctx.shadowColor = '#e74c3c'; ctx.fillText("⚔️", p.x + p.w / 2, p.y - 15 + bounce); }
                 else if (p.hasRevive) { ctx.shadowBlur = 15; ctx.shadowColor = '#f72585'; ctx.fillText("💖", p.x + p.w / 2, p.y - 15 + bounce); }
                 else if (p.hasSnow) { ctx.shadowBlur = 15; ctx.shadowColor = '#00f0ff'; ctx.fillText("❄️", p.x + p.w / 2, p.y - 15 + bounce); }
                 else if (p.hasWeb) { ctx.shadowBlur = 15; ctx.shadowColor = '#fff'; ctx.fillText("🕸️", p.x + p.w / 2, p.y - 15 + bounce); }
