@@ -1,10 +1,19 @@
-function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false) {
+function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, currentEmoji = "😎") {
     ctx.save(); ctx.translate(x, y); ctx.rotate(angle); 
     ctx.fillStyle = colorStr; ctx.shadowBlur = 20; ctx.shadowColor = colorStr; ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.fillStyle = '#0b0c10'; ctx.shadowBlur = 0; ctx.fillRect(-w / 2 + 6, -h / 2 + 6, w - 12, 6);
     let hOffset = isFriend ? Math.sin(Date.now() / 150) * 8 - 5 : -vy * 1.5;
     if (!isFriend) { if (hOffset < -18) hOffset = -18; if (hOffset > 10) hOffset = 10; }
     ctx.fillStyle = '#45a29e'; ctx.fillRect(-w / 2 - 12, hOffset - 6, 8, 12); ctx.fillRect(w / 2 + 4, hOffset - 6, 8, 12);
+
+    // --- VẼ EMOJI KHUÔN MẶT LÊN ĐẦU NHÂN VẬT ---
+    ctx.font = "14px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowBlur = 0; 
+    ctx.fillText(currentEmoji || "😎", 0, -2);
+    // ------------------------------------------
+
     ctx.restore();
 }
 
@@ -22,7 +31,9 @@ function drawEntity(entity, isOpponent = false) {
         return;
     }
     let colorMain = isOpponent ? '#ff9f1c' : getPlayerColor(entity.colorStage);
-    drawEntityRaw(ctx, entity.x + 15, entity.y + (entity.h || 30) / 2, 30, entity.h || 30, entity.angle, entity.vy, colorMain, false);
+    let emojiToDraw = isOpponent ? (entity.currentEmoji || "🤖") : (entity.currentEmoji || "😎");
+    
+    drawEntityRaw(ctx, entity.x + 15, entity.y + (entity.h || 30) / 2, 30, entity.h || 30, entity.angle, entity.vy, colorMain, false, emojiToDraw);
     if (entity.berserkTimer > 0) { ctx.save(); ctx.font = "16px Arial"; ctx.textAlign = "center"; ctx.fillText("⚔️", entity.x + 15, entity.y - 15); ctx.restore(); }
 }
 
@@ -70,10 +81,10 @@ function draw() {
     for (let p of platforms) {
         if(p.y > canvas.height + 50 || p.y < -50 || p.broken) continue; 
         if (!p.visited) { ctx.fillStyle = p.dx !== 0 ? '#f72585' : '#45a29e'; ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle; } else { ctx.fillStyle = '#1f2833'; ctx.shadowBlur = 0; }
-        
+         
         ctx.globalAlpha = p.dx === 0 ? (p.hp / 6) * 0.5 + 0.5 : (p.hp / 3) * 0.5 + 0.5; ctx.fillRect(p.x, p.y, p.w, p.h); ctx.globalAlpha = 1.0;
         let bounce = Math.sin(Date.now() / 200) * 5; ctx.font = "bold 10px 'Orbitron', Courier New"; ctx.fillStyle = "#0b0c10"; ctx.fillText(p.hp, p.x + p.w / 2, p.y + 10);
-        
+         
         ctx.font = "24px Arial";
         if (p.hasMic) { ctx.shadowBlur = 15; ctx.shadowColor = '#ff0055'; ctx.fillText("🎤", p.x + p.w / 2, p.y - 15 + bounce); }
         else if (p.hasRocket) { ctx.shadowBlur = 15; ctx.shadowColor = '#ff5500'; ctx.fillText("🚀", p.x + p.w / 2, p.y - 15 + bounce); }
@@ -100,44 +111,38 @@ function lobbyLoop() {
     if (!isLobby) return;
     ctx.fillStyle = 'rgba(11, 12, 16, 0.4)'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+     
     const profileBox = document.getElementById('profile-box');
     if (profileBox) { 
         const rect = profileBox.getBoundingClientRect(); 
-        
-        // Cố định nhân vật cam (Đồng đội) ngồi im ở góc phải
+         
         lobbyFriend.x = rect.right - 28; 
         lobbyFriend.y = rect.top - 20; 
-        
-        // Ép nhân vật xanh (Bạn) bám sát theo mép trên của hộp hồ sơ
+         
         lobbyPlayer.baseY = rect.top - 20; 
-        
-        // Căn chỉnh giới hạn để nhân vật chỉ nhảy quanh quẩn từ mép trái đến giữa hộp
+         
         let leftBound = rect.left + 20;
         let rightBound = rect.left + rect.width / 2;
-        
+         
         if (lobbyPlayer.x > rightBound) lobbyPlayer.dir = -1;
         if (lobbyPlayer.x < leftBound) lobbyPlayer.dir = 1;
     }
 
-    // Vật lý rơi và xoay của nhân vật xanh
     lobbyPlayer.vy += lobbyPlayer.gravity; 
     lobbyPlayer.y += lobbyPlayer.vy; 
     lobbyPlayer.x += 1.2 * lobbyPlayer.dir; 
     lobbyPlayer.angle += 0.05 * lobbyPlayer.dir;
-    
-    // Khi chạm đúng viền hộp thì nảy lên
+     
     if (lobbyPlayer.y > lobbyPlayer.baseY) { 
         lobbyPlayer.y = lobbyPlayer.baseY; 
         lobbyPlayer.vy = -lobbyPlayer.jumpPower; 
         lobbyPlayer.angle = 0; 
     }
-    
+     
     lobbyFriend.angle = Math.sin(Date.now() / 300) * 0.1;
-    
-    // Vẽ hai nhân vật
-    drawEntityRaw(ctx, lobbyPlayer.x, lobbyPlayer.y, lobbyPlayer.w, lobbyPlayer.h, lobbyPlayer.angle, lobbyPlayer.vy, '#66fcf1', false);
-    drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.w, lobbyFriend.h, lobbyFriend.angle, 0, '#ff9f1c', true);
-    
+     
+    drawEntityRaw(ctx, lobbyPlayer.x, lobbyPlayer.y, lobbyPlayer.w, lobbyPlayer.h, lobbyPlayer.angle, lobbyPlayer.vy, '#66fcf1', false, "😎");
+    drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.w, lobbyFriend.h, lobbyFriend.angle, 0, '#ff9f1c', true, "🤖");
+     
     lobbyAnimId = requestAnimationFrame(lobbyLoop);
 }
