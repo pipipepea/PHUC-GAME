@@ -79,10 +79,8 @@
         #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.92); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center; }
         #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7, 0 0 30px #66fcf1; color: #c5c6c7; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;}
         
-        /* Thông báo đẩy lên cao (top: 22%) */
         #toast-msg { position: absolute; top: 22%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: bold; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30; text-align: center; width: 100%; font-family: 'Orbitron', sans-serif;}
 
-        /* Màn hình đếm ngược 3 2 1 */
         #countdown-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.85); display: none; justify-content: center; align-items: center; z-index: 60; pointer-events: none; }
         #countdown-text { font-size: 90px; color: #66fcf1; text-shadow: 0 0 20px #66fcf1, 0 0 40px #66fcf1; font-family: 'Orbitron', sans-serif; animation: pulseCount 0.8s infinite alternate; }
         @keyframes pulseCount { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.15); opacity: 1; } }
@@ -356,17 +354,14 @@
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, -50%) scale(1)'; }, 2000);
         }
 
-        // Tinh chỉnh và đồng bộ kết nối 2 người chơi
         function setupConnection() {
             conn.on('data', (data) => {
                 if (data.type === 'ready') { 
-                    // Host nhận lệnh ready từ client -> tạo seed và phát lệnh đếm ngược cho cả 2
                     let seed = Math.floor(Math.random() * 99999); 
                     conn.send({ type: 'start', seed: seed }); 
                     startCountdown(seed, false); 
                 } 
                 else if (data.type === 'start') { 
-                    // Client nhận seed từ Host -> đồng bộ bắt đầu đếm ngược
                     startCountdown(data.seed, false); 
                 }
                 else if (data.type === 'update') { 
@@ -375,9 +370,11 @@
                     document.getElementById('opp-score').innerText = opponentData.score; 
                 }
                 else if (data.type === 'revive') { 
-                    // Đồng đội ăn tim để cứu mình qua mạng
-                    player.isDead = false; player.vy = -baseJump * 1.5; player.x = oppRender.x; player.y = oppRender.y - 150; 
-                    showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585"); 
+                    // Chế độ đôi: Đồng đội ăn trái tim để cứu sống mình ngay lập tức[cite: 1]
+                    player.isDead = false; 
+                    player.vy = -baseJump * 1.5; 
+                    player.y = canvas.height - 150;
+                    showToast("💖 ĐÃ ĐƯỢC ĐỒNG ĐỘI CỨU SỐNG! 💖", "#f72585"); 
                 }
                 else if (data.type === 'slow') { 
                     slowTime = 300; 
@@ -406,7 +403,6 @@
         function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
         
-        // Đếm ngược 3 2 1 đồng bộ
         function startCountdown(seed, solo = false) {
             isLobby = false; cancelAnimationFrame(lobbyAnimId);
             document.getElementById('mp-lobby').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
@@ -443,7 +439,7 @@
                 document.getElementById('rocket-counter').style.display = 'block';
             } else {
                 document.getElementById('opp-score-container').style.display = 'block';
-                document.getElementById('heart-display').style.display = 'none'; // Chế độ đôi dùng tim để hồi sinh đồng đội
+                document.getElementById('heart-display').style.display = 'none'; // Chế độ đôi: tim dùng để cứu đồng đội
                 document.getElementById('rocket-counter').style.display = 'block';
             }
 
@@ -544,12 +540,19 @@
                 if (average > 60) { player.vy -= 1.2; if (player.vy < -player.jumpPower * 1.5) player.vy = -player.jumpPower * 1.5; spawnExhaust(player.x + 15, player.y + player.h); }
             }
 
+            // Đồng bộ mượt mà không giật vị trí của người chơi còn lại (Interpolation tối ưu)
             if (opponentData) {
-                opponentData.screenY = opponentData.worldY + cameraOffset; oppRender.x += (opponentData.x - oppRender.x) * 0.5;
-                if (opponentData.vy < -5 || Math.abs(opponentData.screenY - oppRender.y) > 30) { oppRender.y = opponentData.screenY; } else { oppRender.y += (opponentData.screenY - oppRender.y) * 0.6; }
-                oppRender.squash += (opponentData.squash - oppRender.squash) * 0.5; oppRender.angle += (opponentData.angle - oppRender.angle) * 0.5;
-                oppRender.vy = opponentData.vy; oppRender.isDead = opponentData.isDead; oppRender.h = opponentData.h; 
-                if (opponentData.colorStage > oppRender.colorStage) { spawnExplosion(oppRender.x + 15, oppRender.y + oppRender.h / 2, getPlayerColor(opponentData.colorStage)); }
+                let targetOppScreenY = opponentData.worldY + cameraOffset;
+                oppRender.x += (opponentData.x - oppRender.x) * 0.7; // Tăng hệ số nội suy giúp bắt trọn chuyển động mượt không giật
+                oppRender.y += (targetOppScreenY - oppRender.y) * 0.7;
+                oppRender.squash += (opponentData.squash - oppRender.squash) * 0.5; 
+                oppRender.angle += (opponentData.angle - oppRender.angle) * 0.5;
+                oppRender.vy = opponentData.vy; 
+                oppRender.isDead = opponentData.isDead; 
+                oppRender.h = opponentData.h; 
+                if (opponentData.colorStage > oppRender.colorStage) { 
+                    spawnExplosion(oppRender.x + 15, oppRender.y + oppRender.h / 2, getPlayerColor(opponentData.colorStage)); 
+                }
                 oppRender.colorStage = opponentData.colorStage;
             }
 
@@ -601,7 +604,23 @@
 
             for (let i = particles.length - 1; i >= 0; i--) { let pt = particles[i]; pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.04; if (pt.life <= 0) particles.splice(i, 1); }
 
-            if (conn && conn.open) { conn.send({ type: 'update', player: { name: myName, x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score, h: player.h, colorStage: player.colorStage } }); }
+            if (conn && conn.open) { 
+                conn.send({ 
+                    type: 'update', 
+                    player: { 
+                        name: myName, 
+                        x: player.x, 
+                        worldY: player.y - cameraOffset, 
+                        vy: player.vy, 
+                        squash: player.squash, 
+                        angle: player.angle, 
+                        isDead: player.isDead, 
+                        score: score, 
+                        h: player.h, 
+                        colorStage: player.colorStage 
+                    } 
+                }); 
+            }
 
             if (player.isDead && (isSoloMode || !conn || !conn.open || (opponentData && opponentData.isDead))) { gameOver(); return; }
 
@@ -636,6 +655,7 @@
                             if (p.hasRevive) { 
                                 p.hasRevive = false; 
                                 if (isSoloMode || !conn || !conn.open) {
+                                    // Chế độ chơi đơn: Ăn 2 tim được 1 mạng (tối đa 4 mạng)
                                     if (player.hearts < 4) {
                                         player.heartAccumulator++;
                                         if (player.heartAccumulator >= 2) {
@@ -649,10 +669,14 @@
                                         spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585');
                                     }
                                 } else {
+                                    // Chế độ chơi cùng bạn bè: Ăn trái tim cứu sống luôn đồng đội đang bị chết[cite: 1]
                                     if (opponentData && opponentData.isDead) { 
                                         conn.send({ type: 'revive' }); 
-                                        showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585"); 
+                                        showToast("💖 CỨU SỐNG ĐỒNG ĐỘI THÀNH CÔNG! 💖", "#f72585"); 
+                                    } else {
+                                        showToast("💖 NHẶT ĐƯỢC TRÁI TIM MAY MẮN! 💖", "#f72585");
                                     }
+                                    spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585');
                                 }
                             }
 
@@ -692,6 +716,7 @@
                 }
             }
 
+            // Camera cuốn theo người chơi độc lập mượt mà theo từng luồng
             let focusY = player.y; if (player.isDead && opponentData && !opponentData.isDead) { focusY = oppRender.y; }
             const cameraThreshold = canvas.height / 2;
             if (focusY < cameraThreshold) {
