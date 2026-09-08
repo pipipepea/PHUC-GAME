@@ -79,8 +79,10 @@
         #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.92); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center; }
         #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7, 0 0 30px #66fcf1; color: #c5c6c7; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;}
         
+        /* Thông báo đẩy lên cao (top: 22%) */
         #toast-msg { position: absolute; top: 22%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: bold; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30; text-align: center; width: 100%; font-family: 'Orbitron', sans-serif;}
 
+        /* Màn hình đếm ngược 3 2 1 */
         #countdown-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.85); display: none; justify-content: center; align-items: center; z-index: 60; pointer-events: none; }
         #countdown-text { font-size: 90px; color: #66fcf1; text-shadow: 0 0 20px #66fcf1, 0 0 40px #66fcf1; font-family: 'Orbitron', sans-serif; animation: pulseCount 0.8s infinite alternate; }
         @keyframes pulseCount { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.15); opacity: 1; } }
@@ -182,7 +184,7 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // URL Google Apps Script chính thức
+        // URL Google Apps Script chính thức[cite: 1]
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxZrYN0690PqOrQddeOEsjoR9xvT-RAm__pKJ_sznSlKWKyoeyR9-yrnx4ivAxgS6BDSw/exec";
 
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
@@ -253,7 +255,7 @@
         }
         lobbyLoop();
 
-        // --- GỬI ĐIỂM CÓ KÈM MÃ TOKEN BẢO MẬT CHỐNG HACK ---
+        // --- GỬI ĐIỂM CÓ KÈM MÃ TOKEN BẢO MẬT CHỐNG HACK[cite: 1] ---
         function submitScore(name, score) {
             if (!GOOGLE_SHEET_URL || score <= 0) return;
             let safeName = encodeURIComponent(name);
@@ -340,7 +342,7 @@
             if(targetId) { await requestMic(); document.getElementById('connect-btn').innerText = "Đang kết nối..."; conn = peer.connect(targetId); setupConnection(); conn.on('open', () => { document.getElementById('connect-btn').innerText = "Đã tìm thấy!"; conn.send({ type: 'ready' }); }); }
         };
 
-        // Chế độ chơi 1 mình trực tiếp
+        // Chơi 1 mình trực tiếp
         document.getElementById('solo-btn').onclick = async () => { 
             saveProfile(); 
             await requestMic(); 
@@ -354,16 +356,32 @@
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, -50%) scale(1)'; }, 2000);
         }
 
+        // Tinh chỉnh và đồng bộ kết nối 2 người chơi
         function setupConnection() {
             conn.on('data', (data) => {
-                if (data.type === 'ready') { let seed = Math.floor(Math.random() * 99999); conn.send({ type: 'start', seed: seed }); startCountdown(seed, false); } 
-                else if (data.type === 'start') { startCountdown(data.seed, false); }
-                else if (data.type === 'update') { opponentData = data.player; document.getElementById('opp-name').innerText = opponentData.name || 'Đồng đội'; document.getElementById('opp-score').innerText = opponentData.score; }
+                if (data.type === 'ready') { 
+                    // Host nhận lệnh ready từ client -> tạo seed và phát lệnh đếm ngược cho cả 2
+                    let seed = Math.floor(Math.random() * 99999); 
+                    conn.send({ type: 'start', seed: seed }); 
+                    startCountdown(seed, false); 
+                } 
+                else if (data.type === 'start') { 
+                    // Client nhận seed từ Host -> đồng bộ bắt đầu đếm ngược
+                    startCountdown(data.seed, false); 
+                }
+                else if (data.type === 'update') { 
+                    opponentData = data.player; 
+                    document.getElementById('opp-name').innerText = opponentData.name || 'Đồng đội'; 
+                    document.getElementById('opp-score').innerText = opponentData.score; 
+                }
                 else if (data.type === 'revive') { 
+                    // Đồng đội ăn tim để cứu mình qua mạng
                     player.isDead = false; player.vy = -baseJump * 1.5; player.x = oppRender.x; player.y = oppRender.y - 150; 
                     showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585"); 
                 }
-                else if (data.type === 'slow') { slowTime = 300; }
+                else if (data.type === 'slow') { 
+                    slowTime = 300; 
+                }
             });
             conn.on('close', () => { alert("Đồng đội đã ngắt kết nối!"); window.location.reload(); });
         }
@@ -388,6 +406,7 @@
         function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
         
+        // Đếm ngược 3 2 1 đồng bộ
         function startCountdown(seed, solo = false) {
             isLobby = false; cancelAnimationFrame(lobbyAnimId);
             document.getElementById('mp-lobby').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
@@ -424,7 +443,7 @@
                 document.getElementById('rocket-counter').style.display = 'block';
             } else {
                 document.getElementById('opp-score-container').style.display = 'block';
-                document.getElementById('heart-display').style.display = 'none'; 
+                document.getElementById('heart-display').style.display = 'none'; // Chế độ đôi dùng tim để hồi sinh đồng đội
                 document.getElementById('rocket-counter').style.display = 'block';
             }
 
@@ -654,7 +673,7 @@
                                 for(let j = i; j <= targetIdx; j++) { 
                                     if(!platforms[j].visited) { 
                                         platforms[j].visited = true; 
-                                        score += (useGyro ? 2 : 1); // Điểm nhân đôi khi bật cảm biến lắc
+                                        score += (useGyro ? 2 : 1); 
                                     } 
                                 } 
                                 checkEvol(); 
@@ -664,7 +683,7 @@
                                 player.vy = -player.jumpPower; player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0; player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
                                 if (!p.visited) { 
                                     p.visited = true; 
-                                    score += (useGyro ? 2 : 1); // Điểm nhân đôi khi bật cảm biến lắc (cảm biến nghiêng)
+                                    score += (useGyro ? 2 : 1); 
                                     checkEvol(); 
                                 }
                             }
