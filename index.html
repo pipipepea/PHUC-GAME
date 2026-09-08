@@ -79,10 +79,8 @@
         #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.92); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center; }
         #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7, 0 0 30px #66fcf1; color: #c5c6c7; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;}
         
-        /* Đã đẩy thông báo lên cao hơn (top: 22%) */
         #toast-msg { position: absolute; top: 22%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: bold; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30; text-align: center; width: 100%; font-family: 'Orbitron', sans-serif;}
 
-        /* Màn hình đếm ngược 3 2 1 */
         #countdown-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.85); display: none; justify-content: center; align-items: center; z-index: 60; pointer-events: none; }
         #countdown-text { font-size: 90px; color: #66fcf1; text-shadow: 0 0 20px #66fcf1, 0 0 40px #66fcf1; font-family: 'Orbitron', sans-serif; animation: pulseCount 0.8s infinite alternate; }
         @keyframes pulseCount { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.15); opacity: 1; } }
@@ -346,7 +344,7 @@
         document.getElementById('solo-btn').onclick = async () => { 
             saveProfile(); 
             await requestMic(); 
-            startCountdown(Math.random(), true); // Bắt đầu đếm ngược 3 2 1 rồi chơi 1 mình
+            startCountdown(Math.random(), true); 
         };
 
         function showToast(text, color) {
@@ -390,7 +388,6 @@
         function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
         
-        // --- HÀM ĐẾM NGƯỢC 3 2 1 TRƯỚC KHI VÀO GAME ---
         function startCountdown(seed, solo = false) {
             isLobby = false; cancelAnimationFrame(lobbyAnimId);
             document.getElementById('mp-lobby').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
@@ -438,7 +435,6 @@
             score = 0; isGameOver = false; cameraOffset = 0; particles = []; slowTime = 0; micTimeRemaining = 0;
             opponentData = null; oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0 }; 
 
-            // Khởi tạo player: hearts = 1, heartAccumulator = 0 (cần 2 trái tim mới được 1 mạng), rocketCount = 0, rocketFlying = false
             player = { 
                 x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, 
                 w: 30, h: 30, vy: 0, jumpPower: baseJump, colorStage: 0, squash: 1.0, angle: 0, 
@@ -460,11 +456,11 @@
                 
                 let isMoving = rng() < 0.35 && i > 2; let speed = isMoving ? (rng() > 0.5 ? 2.5 : -2.5) : 0; let hp = isMoving ? 3 : 6; 
                 let hasHeart = (rng() < 0.08) && i > 10; 
-                let hasShrink = (rng() < 0.08) && !hasHeart && i > 5; // Nút màu xanh thu nhỏ (ngắn lại, tăng sức nhảy, không trừ điểm)
+                let hasShrink = (rng() < 0.08) && !hasHeart && i > 5; 
                 let hasSnow = (rng() < 0.05) && !hasHeart && !hasShrink && i > 15; 
                 let hasWeb = (rng() < 0.05) && !hasHeart && !hasShrink && !hasSnow && i > 20;
                 let hasMic = (rng() < 0.12) && !hasHeart && !hasShrink && !hasSnow && !hasWeb; 
-                let hasRocket = (rng() < 0.08) && !hasHeart && !hasShrink && !hasSnow && !hasWeb && !hasMic && i > 5; // Item tên lửa
+                let hasRocket = (rng() < 0.08) && !hasHeart && !hasShrink && !hasSnow && !hasWeb && !hasMic && i > 5; 
 
                 let p1X = rng() * (canvas.width - PLATFORM_W);
                 platforms.push({ x: p1X, y: currentY, w: PLATFORM_W, h: PLATFORM_H, hp: hp, broken: false, visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink, hasSnow: hasSnow, hasWeb: hasWeb, hasMic: hasMic, hasRocket: hasRocket });
@@ -480,10 +476,27 @@
         const gyroBtn = document.getElementById('gyro-btn');
         function handleOrientation(e) { let gamma = e.gamma; if (gamma > 45) gamma = 45; if (gamma < -45) gamma = -45; gyroGamma = gamma; }
         gyroBtn.onclick = () => {
-            if (useGyro) { useGyro = false; gyroBtn.classList.remove('gyro-active'); window.removeEventListener('deviceorientation', handleOrientation); player.targetX = player.x; } 
-            else { if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') { DeviceOrientationEvent.requestPermission().then(state => { if (state === 'granted') enableGyro(); }).catch(console.error); } else enableGyro(); }
+            if (useGyro) { 
+                useGyro = false; 
+                gyroBtn.classList.remove('gyro-active'); 
+                window.removeEventListener('deviceorientation', handleOrientation); 
+                player.targetX = player.x; 
+                showToast("📱 Đã tắt cảm biến lắc (Điểm chuẩn)", "#66fcf1");
+            } 
+            else { 
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') { 
+                    DeviceOrientationEvent.requestPermission().then(state => { if (state === 'granted') enableGyro(); }).catch(console.error); 
+                } else {
+                    enableGyro();
+                }
+            }
         };
-        function enableGyro() { useGyro = true; gyroBtn.classList.add('gyro-active'); window.addEventListener('deviceorientation', handleOrientation); }
+        function enableGyro() { 
+            useGyro = true; 
+            gyroBtn.classList.add('gyro-active'); 
+            window.addEventListener('deviceorientation', handleOrientation); 
+            showToast("📱 Bật cảm biến lắc: ĐIỂM GẤP ĐÔI! ⚡", "#2ecc71");
+        }
 
         function checkEvol() {
             let expectedLevel = Math.floor(score / 20);
@@ -522,9 +535,8 @@
             }
 
             if (!player.isDead) {
-                // --- XỬ LÝ CHẾ ĐỘ BAY THẲNG LÊN 10 BẬC DO TÊN LỬA ---
                 if (player.rocketFlying) {
-                    player.vy = -14; // Tốc độ bay lên nhanh
+                    player.vy = -14; 
                     player.y += player.vy;
                     spawnExhaust(player.x + 15, player.y + player.h);
                     player.rocketStepsLeft--;
@@ -586,7 +598,6 @@
 
                             if (p.hasMic) { p.hasMic = false; player.micCount++; document.getElementById('mic-counter').innerText = `🎤: ${player.micCount}/3`; if (player.micCount >= 3) { player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; micTimeRemaining = 120; showToast("🎤 THỔI MẠNH ĐỂ BAY! 🎤", "#ff0055"); } }
                             
-                            // Xử lý ăn item Tên lửa
                             if (p.hasRocket) {
                                 p.hasRocket = false;
                                 player.rocketCount++;
@@ -596,7 +607,7 @@
                                     player.rocketCount = 0;
                                     document.getElementById('rocket-count').innerText = 0;
                                     player.rocketFlying = true;
-                                    player.rocketStepsLeft = 60; // Số frame bay lên tương đương khoảng 10 bậc
+                                    player.rocketStepsLeft = 60; 
                                     showToast("🚀 KÍCH HOẠT TÊN LỬA BAY VÚT LÊN! 🚀", "#ff5500");
                                 } else {
                                     showToast(`🚀 ĐÃ THU TÊN LỬA (${player.rocketCount}/6)! 🚀`, "#ff5500");
@@ -606,7 +617,6 @@
                             if (p.hasRevive) { 
                                 p.hasRevive = false; 
                                 if (isSoloMode || !conn || !conn.open) {
-                                    // Ăn 2 trái tim mới được 1 mạng. Nếu mạng đã đầy (4 mạng) thì không thông báo đã đủ 4 mạng nữa.
                                     if (player.hearts < 4) {
                                         player.heartAccumulator++;
                                         if (player.heartAccumulator >= 2) {
@@ -619,7 +629,6 @@
                                         }
                                         spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585');
                                     }
-                                    // Mạng đã đầy (4 mạng) thì ăn trái tim không làm gì cả và không thông báo gì thêm.
                                 } else {
                                     if (opponentData && opponentData.isDead) { 
                                         conn.send({ type: 'revive' }); 
@@ -628,22 +637,36 @@
                                 }
                             }
 
-                            // Ăn nút màu xanh thu nhỏ (hasShrink): Không bị trừ điểm, ngắn lại và tăng sức nhảy
                             if (p.hasShrink) { 
                                 p.hasShrink = false; 
                                 spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff'); 
-                                // Ngắn lại (chiều cao h giảm bớt, tối thiểu 15px) và tăng sức nhảy
                                 player.h = Math.max(15, player.h - 5);
-                                player.jumpPower += 1.5; // Tăng sức nhảy
+                                player.jumpPower += 1.5; 
                                 showToast("⚡ THU NHỎ & TĂNG SỨC NHẢY! ⚡", "#00f0ff");
                             }
 
                             if (p.hasSnow) { p.hasSnow = false; slowTime = 300; showToast("❄️ ĐÓNG BĂNG THỜI GIAN! ❄️", "#80d0ff"); if(conn && conn.open) conn.send({type: 'slow'}); }
-                            if (p.hasWeb) { p.hasWeb = false; let targetIdx = Math.min(i + 8, platforms.length - 1); player.webTarget = platforms[targetIdx]; showToast("🕸️ NGƯỜI NHỆN! 🕸️", "#fff"); for(let j = i; j <= targetIdx; j++) { if(!platforms[j].visited) { platforms[j].visited = true; score++; } } checkEvol(); }
+                            if (p.hasWeb) { 
+                                p.hasWeb = false; 
+                                let targetIdx = Math.min(i + 8, platforms.length - 1); 
+                                player.webTarget = platforms[targetIdx]; 
+                                showToast("🕸️ NGƯỜI NHỆN! 🕸️", "#fff"); 
+                                for(let j = i; j <= targetIdx; j++) { 
+                                    if(!platforms[j].visited) { 
+                                        platforms[j].visited = true; 
+                                        score += (useGyro ? 2 : 1); // Điểm nhân đôi khi bật cảm biến lắc
+                                    } 
+                                } 
+                                checkEvol(); 
+                            }
 
                             if(!player.webTarget && !player.rocketFlying) {
                                 player.vy = -player.jumpPower; player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0; player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
-                                if (!p.visited) { p.visited = true; score++; checkEvol(); }
+                                if (!p.visited) { 
+                                    p.visited = true; 
+                                    score += (useGyro ? 2 : 1); // Điểm nhân đôi khi bật cảm biến lắc (cảm biến nghiêng)
+                                    checkEvol(); 
+                                }
                             }
                         }
                     }
