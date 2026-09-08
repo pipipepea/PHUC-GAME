@@ -1,21 +1,24 @@
 function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, currentEmoji = "😎") {
     ctx.save(); ctx.translate(x, y); ctx.rotate(angle); 
     ctx.fillStyle = colorStr; ctx.shadowBlur = 20; ctx.shadowColor = colorStr; ctx.fillRect(-w / 2, -h / 2, w, h);
+    
+    // Khung chữ nhật màu đen của nhân vật
     ctx.fillStyle = '#0b0c10'; ctx.shadowBlur = 0; ctx.fillRect(-w / 2 + 6, -h / 2 + 6, w - 12, 6);
+    
     let hOffset = isFriend ? Math.sin(Date.now() / 150) * 8 - 5 : -vy * 1.5;
     if (!isFriend) { if (hOffset < -18) hOffset = -18; if (hOffset > 10) hOffset = 10; }
     ctx.fillStyle = '#45a29e'; ctx.fillRect(-w / 2 - 12, hOffset - 6, 8, 12); ctx.fillRect(w / 2 + 4, hOffset - 6, 8, 12);
 
-    // --- VẼ EMOJI: TO HƠN 1.5 LẦN (21px) VÀ NẰM CỐ ĐỊNH TRÊN ĐỈNH ĐẦU ---
+    // --- VẼ EMOJI: NẰM CHÍNH GIỮA Ô ĐEN VÀ TO HƠN 1.2 LẦN (17px) ---
     ctx.save();
-    ctx.font = "21px Arial";
+    ctx.font = "17px Arial";
     ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
+    ctx.textBaseline = "middle";
     ctx.shadowBlur = 0; 
-    let emojiY = -h / 2 - 4; 
+    let emojiY = -h / 2 + 9; 
     ctx.fillText(currentEmoji || "😎", 0, emojiY);
     ctx.restore();
-    // -----------------------------------------------------------------
+    // -------------------------------------------------------------
 
     ctx.restore();
 }
