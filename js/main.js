@@ -79,7 +79,7 @@ function startGame(seed, solo = false) {
 function initGame(seed) {
     score = 0; isGameOver = false; cameraOffset = 0; particles = []; trailPoints = []; slowTime = 0; micTimeRemaining = 0; opponentData = null; 
     oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0, berserkTimer: 0, trail: [] }; 
-    player = { x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, w: 30, h: 30, vy: 0, jumpPower: baseJump, colorStage: 0, squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1, isDead: false, webTarget: null, micCount: 0, hearts: 1, heartAccumulator: 0, rocketCount: 0, rocketFlying: false, rocketStepsLeft: 0, berserkTimer: 0 };
+    player = { x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, w: 30, h: 30, vy: 0, jumpPower: baseJump, colorStage: 0, squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1, isDead: false, webTarget: null, micCount: 0, hearts: 1, heartAccumulator: 0, rocketCount: 0, rocketFlying: false, rocketStepsLeft: 0, berserkTimer: 0,currentEmoji: "😎" };
     
     document.getElementById('mic-counter').innerText = `🎤: 0/3`; document.getElementById('heart-count').innerText = player.hearts; document.getElementById('rocket-count').innerText = player.rocketCount; document.getElementById('sword-status').innerText = "TẮT";
     platforms = [{ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0, hp: 6, hasRevive: false, hasShrink: false, hasSnow: false, hasWeb: false, hasMic: false, hasRocket: false, hasSword: false, broken: false }];
