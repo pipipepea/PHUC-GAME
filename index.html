@@ -4,44 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Neon Jumper - By P&T</title>
+    <!-- Nhập Google Font phong cách Neon / Cyberpunk -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background: #0b0c10; color: #66fcf1; font-family: 'Courier New', Courier, monospace; touch-action: none; cursor: crosshair; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #0b0c10; color: #66fcf1; font-family: 'Orbitron', 'Courier New', Courier, monospace; touch-action: none; cursor: crosshair; }
         canvas { display: block; width: 100vw; height: 100vh; position: absolute; top:0; left:0; z-index: 1;}
         
         #ui-layer { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; display: none;}
-        .stat { margin-bottom: 5px; font-size: 16px; font-weight: bold; text-shadow: 0 0 5px #66fcf1;}
-        #score-display { font-size: 24px; color: #45a29e; }
-        .opponent-stat { color: #ff9f1c; text-shadow: 0 0 5px #ff9f1c; }
-        .mic-stat { color: #ff0055; text-shadow: 0 0 5px #ff0055; font-size: 20px; margin-top: 10px;}
+        .stat { margin-bottom: 5px; font-size: 16px; font-weight: bold; text-shadow: 0 0 8px #66fcf1; font-family: 'Orbitron', sans-serif;}
+        #score-display { font-size: 22px; color: #45a29e; }
+        .opponent-stat { color: #ff9f1c; text-shadow: 0 0 8px #ff9f1c; }
+        .mic-stat { color: #ff0055; text-shadow: 0 0 8px #ff0055; font-size: 18px; margin-top: 10px;}
+        .heart-stat { color: #f72585; text-shadow: 0 0 10px #f72585; font-size: 20px; margin-top: 5px; letter-spacing: 2px;}
 
         #mp-lobby { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: transparent; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 40; pointer-events: none;}
         
         #lobby-content { pointer-events: auto; display: flex; flex-direction: column; align-items: center; width: 100%; margin-top: 130px;}
         
         @keyframes neonFlicker {
-            0%, 18%, 22%, 25%, 53%, 57%, 100% { text-shadow: 0 0 10px #66fcf1, 0 0 20px #66fcf1, 0 0 40px #66fcf1; color: #e0ffff; }
+            0%, 18%, 22%, 25%, 53%, 57%, 100% { text-shadow: 0 0 10px #66fcf1, 0 0 20px #66fcf1, 0 0 40px #66fcf1, 0 0 80px #66fcf1; color: #e0ffff; }
             20%, 24%, 55% { text-shadow: none; color: #1f2833; }
         }
-        #mp-lobby h1 { font-size: 34px; margin: 0; letter-spacing: 2px; position: absolute; top: 6%; animation: neonFlicker 2.5s infinite alternate; text-align: center; width: 100%;}
+        #mp-lobby h1 { font-size: 34px; margin: 0; letter-spacing: 3px; position: absolute; top: 6%; animation: neonFlicker 2.5s infinite alternate; text-align: center; width: 100%; font-family: 'Orbitron', sans-serif;}
         
-        .box { background: rgba(31, 40, 51, 0.85); padding: 10px 15px; border-radius: 12px; border: 1px solid #45a29e; width: 75%; max-width: 260px; text-align: center; margin-bottom: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px);}
-        .box h3 { margin: 0 0 6px 0; font-size: 14px; color: #45a29e; letter-spacing: 1px;}
+        .box { background: rgba(31, 40, 51, 0.85); padding: 10px 15px; border-radius: 12px; border: 2px solid #66fcf1; width: 75%; max-width: 260px; text-align: center; margin-bottom: 10px; box-shadow: 0 0 20px rgba(102, 252, 241, 0.25); backdrop-filter: blur(5px);}
+        .box h3 { margin: 0 0 6px 0; font-size: 14px; color: #66fcf1; letter-spacing: 2px; text-shadow: 0 0 6px #66fcf1; font-family: 'Orbitron', sans-serif;}
         
         .room-code-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 4px; }
-        .room-label { font-size: 11px; color: #c5c6c7; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px;}
-        .code-box { display: flex; align-items: center; justify-content: space-between; background: #0b0c10; border: 1px solid #ff9f1c; border-radius: 8px; padding: 5px 12px; width: 85%; box-shadow: 0 0 10px rgba(255, 159, 28, 0.2); }
-        #my-id-display { font-size: 18px; font-weight: bold; color: #ff9f1c; letter-spacing: 2px; margin:0;}
+        .room-label { font-size: 11px; color: #c5c6c7; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px; font-family: 'Orbitron', sans-serif;}
+        .code-box { display: flex; align-items: center; justify-content: space-between; background: #0b0c10; border: 1px solid #ff9f1c; border-radius: 8px; padding: 5px 12px; width: 85%; box-shadow: 0 0 10px rgba(255, 159, 28, 0.3); }
+        #my-id-display { font-size: 18px; font-weight: bold; color: #ff9f1c; letter-spacing: 2px; margin:0; font-family: 'Orbitron', sans-serif;}
         
         .action-btns { display: flex; gap: 8px; }
         .icon-btn-small { background: transparent; border: none; font-size: 16px; cursor: pointer; padding: 0; margin: 0; box-shadow: none; width: auto; transition: transform 0.2s; }
         .icon-btn-small:hover { transform: scale(1.2); background: transparent;}
 
-        input[type="text"] { width: 85%; padding: 7px; font-size: 15px; text-align: center; background: #0b0c10; color: #66fcf1; border: 1px solid #45a29e; border-radius: 8px; font-family: inherit; margin-bottom: 6px; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;}
-        input[type="text"]:focus { outline: none; border-color: #66fcf1; box-shadow: 0 0 10px #66fcf1;}
+        input[type="text"] { width: 85%; padding: 7px; font-size: 15px; text-align: center; background: #0b0c10; color: #66fcf1; border: 2px solid #45a29e; border-radius: 8px; font-family: 'Orbitron', sans-serif; margin-bottom: 6px; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; box-shadow: inset 0 0 8px rgba(0,0,0,0.8);}
+        input[type="text"]:focus { outline: none; border-color: #66fcf1; box-shadow: 0 0 12px #66fcf1, inset 0 0 8px rgba(102,252,241,0.2);}
         
-        button { padding: 9px 15px; font-size: 14px; font-weight: bold; background: #1f2833; color: #66fcf1; border: 2px solid #66fcf1; border-radius: 8px; cursor: pointer; box-shadow: 0 0 10px rgba(102,252,241,0.3); transition: 0.2s; width: 85%; max-width: 280px; margin-bottom: 6px; text-transform: uppercase;}
-        button:hover { background: rgba(102, 252, 241, 0.2); box-shadow: 0 0 15px #66fcf1;}
+        button { padding: 9px 15px; font-size: 14px; font-weight: bold; background: #1f2833; color: #66fcf1; border: 2px solid #66fcf1; border-radius: 8px; cursor: pointer; box-shadow: 0 0 12px rgba(102,252,241,0.3); transition: 0.2s; width: 85%; max-width: 280px; margin-bottom: 6px; text-transform: uppercase; font-family: 'Orbitron', sans-serif; letter-spacing: 1px;}
+        button:hover { background: rgba(102, 252, 241, 0.25); box-shadow: 0 0 20px #66fcf1; color: #fff;}
         button:active { background: #66fcf1; color: #0b0c10; }
 
         @media (min-width: 768px) {
@@ -56,44 +59,44 @@
             button { padding: 13px 24px; font-size: 16px; width: 88%; max-width: 400px; margin-bottom: 10px; }
         }
         
-        .btn-orange { border-color: #ff9f1c; color: #ff9f1c; box-shadow: 0 0 10px rgba(255,159,28,0.3); }
-        .btn-orange:hover { background: rgba(255, 159, 28, 0.2); box-shadow: 0 0 15px #ff9f1c;}
+        .btn-orange { border-color: #ff9f1c; color: #ff9f1c; box-shadow: 0 0 12px rgba(255,159,28,0.35); }
+        .btn-orange:hover { background: rgba(255, 159, 28, 0.25); box-shadow: 0 0 20px #ff9f1c; color: #fff;}
         .btn-orange:active { background: #ff9f1c; color: #0b0c10; }
         
-        .btn-green { border-color: #2ecc71; color: #2ecc71; box-shadow: 0 0 10px rgba(46,204,113,0.3); margin-top: 4px;}
-        .btn-green:hover { background: rgba(46, 204, 113, 0.2); box-shadow: 0 0 15px #2ecc71;}
+        .btn-green { border-color: #2ecc71; color: #2ecc71; box-shadow: 0 0 12px rgba(46,204,113,0.35); margin-top: 4px;}
+        .btn-green:hover { background: rgba(46, 204, 113, 0.25); box-shadow: 0 0 20px #2ecc71; color: #fff;}
         .btn-green:active { background: #2ecc71; color: #0b0c10; }
 
         .btn-gray { border-color: #c5c6c7; color: #c5c6c7; box-shadow: none; margin-top: 4px;}
-        .btn-gray:hover { background: rgba(197, 198, 199, 0.2); box-shadow: 0 0 10px #c5c6c7;}
+        .btn-gray:hover { background: rgba(197, 198, 199, 0.25); box-shadow: 0 0 12px #c5c6c7; color: #fff;}
         .btn-gray:active { background: #c5c6c7; color: #0b0c10; }
 
         #top-right-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; z-index: 15; display:none;}
-        .icon-btn { font-size: 28px; cursor: pointer; transition: transform 0.2s, filter 0.2s; text-shadow: 0 0 10px #66fcf1; user-select: none; background: rgba(11, 12, 16, 0.6); border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; border: 1px solid #45a29e; }
-        .gyro-active { filter: hue-rotate(90deg) brightness(1.5); border-color: #2ecc71; }
+        .icon-btn { font-size: 28px; cursor: pointer; transition: transform 0.2s, filter 0.2s; text-shadow: 0 0 10px #66fcf1; user-select: none; background: rgba(11, 12, 16, 0.6); border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; border: 2px solid #45a29e; }
+        .gyro-active { filter: hue-rotate(90deg) brightness(1.5); border-color: #2ecc71; box-shadow: 0 0 15px #2ecc71; }
         
-        #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.9); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center; }
-        #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7; color: #c5c6c7; margin-bottom: 10px;}
+        #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 12, 16, 0.92); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20; text-align: center; }
+        #game-over h1 { font-size: 40px; text-shadow: 0 0 15px #c5c6c7, 0 0 30px #66fcf1; color: #c5c6c7; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;}
         
-        #toast-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 26px; font-weight: bold; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30; text-align: center; width: 100%;}
+        #toast-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: bold; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 30; text-align: center; width: 100%; font-family: 'Orbitron', sans-serif;}
 
-        #leaderboard-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(11, 12, 16, 0.98); border: 2px solid #2ecc71; border-radius: 12px; padding: 25px 20px; width: 85%; max-width: 380px; z-index: 50; display: none; box-shadow: 0 0 30px rgba(46, 204, 113, 0.6); text-align: center; max-height: 80vh; overflow-y: auto; pointer-events: auto;}
-        #leaderboard-modal h2 { color: #2ecc71; text-shadow: 0 0 10px #2ecc71; margin-top: 0; font-size: 28px; letter-spacing: 2px;}
-        .lb-entry { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid #1f2833; font-size: 18px;}
+        #leaderboard-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(11, 12, 16, 0.98); border: 2px solid #2ecc71; border-radius: 12px; padding: 25px 20px; width: 85%; max-width: 380px; z-index: 50; display: none; box-shadow: 0 0 35px rgba(46, 204, 113, 0.6); text-align: center; max-height: 80vh; overflow-y: auto; pointer-events: auto;}
+        #leaderboard-modal h2 { color: #2ecc71; text-shadow: 0 0 12px #2ecc71; margin-top: 0; font-size: 28px; letter-spacing: 2px; font-family: 'Orbitron', sans-serif;}
+        .lb-entry { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid #1f2833; font-size: 16px; font-family: 'Orbitron', sans-serif;}
         .lb-rank { color: #ff9f1c; font-weight: bold; width: 35px; text-align: left;}
         .lb-name { color: #66fcf1; flex-grow: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
         .lb-score { color: #2ecc71; font-weight: bold; }
-        .lb-loading { color: #c5c6c7; font-style: italic; margin: 20px 0; }
+        .lb-loading { color: #c5c6c7; font-style: italic; margin: 20px 0; font-family: 'Orbitron', sans-serif;}
 
         @keyframes creditPulse {
-            0% { opacity: 0.2; text-shadow: 0 0 2px #45a29e; }
-            50% { opacity: 1; text-shadow: 0 0 15px #66fcf1, 0 0 25px #66fcf1; }
-            100% { opacity: 0.2; text-shadow: 0 0 2px #45a29e; }
+            0% { opacity: 0.3; text-shadow: 0 0 4px #45a29e; }
+            50% { opacity: 1; text-shadow: 0 0 15px #66fcf1, 0 0 25px #66fcf1, 0 0 35px #66fcf1; }
+            100% { opacity: 0.3; text-shadow: 0 0 4px #45a29e; }
         }
         .footer-credit { 
             position: absolute; bottom: 35px; width: 100%; text-align: center; 
-            font-size: 15px; color: #66fcf1; letter-spacing: 3px; font-weight: bold; 
-            animation: creditPulse 2.5s infinite ease-in-out; pointer-events: none; 
+            font-size: 15px; color: #66fcf1; letter-spacing: 4px; font-weight: bold; 
+            animation: creditPulse 2.5s infinite ease-in-out; pointer-events: none; font-family: 'Orbitron', sans-serif;
         }
     </style>
 </head>
@@ -105,7 +108,7 @@
             <div class="box" id="profile-box">
                 <h3>Hồ Sơ Của Bạn</h3>
                 <input type="text" id="player-name-input" placeholder="NHẬP TÊN CỦA BẠN" maxlength="12">
-                <p style="margin: 0; color: #f72585; font-size: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(247,37,133,0.5);">🏆 Kỷ Lục: <span id="lobby-highscore">0</span></p>
+                <p style="margin: 0; color: #f72585; font-size: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(247,37,133,0.5); font-family: 'Orbitron', sans-serif;">🏆 Kỷ Lục: <span id="lobby-highscore">0</span></p>
             </div>
 
             <div class="box">
@@ -122,7 +125,7 @@
                     </div>
                 </div>
                 
-                <div style="width: 100%; height: 1px; background: rgba(102, 252, 241, 0.2); margin: 8px 0;"></div>
+                <div style="width: 100%; height: 1px; background: rgba(102, 252, 241, 0.3); margin: 8px 0;"></div>
                 
                 <input type="text" id="peer-id-input" placeholder="NHẬP MÃ BẠN BÈ" maxlength="6">
                 <button id="connect-btn" class="btn-orange">Vào Phòng & Chơi</button>
@@ -146,6 +149,7 @@
     <div id="ui-layer">
         <div class="stat" id="score-display">Điểm của <span id="my-ingame-name">Bạn</span>: <span id="score">0</span></div>
         <div class="stat opponent-stat" id="opp-score-container" style="display:none;"><span id="opp-name">Đồng đội</span>: <span id="opp-score">0</span></div>
+        <div class="stat heart-stat" id="heart-display">❤️: <span id="heart-count">1</span>/4</div>
         <div class="stat mic-stat" id="mic-counter">🎤: 0/3</div>
     </div>
     
@@ -157,9 +161,9 @@
 
     <div id="game-over">
         <h1 id="go-title">VUI LÀ CHÍNH</h1>
-        <p style="font-size: 20px;">Thành tích lượt này: <span id="final-score">0</span></p>
-        <p style="font-size: 18px; color: #f72585; font-weight:bold; margin-bottom: 15px; text-shadow: 0 0 10px rgba(247,37,133,0.5);">🏆 Kỷ Lục Cá Nhân: <span id="go-highscore">0</span></p>
-        <p id="pc-encouragement" style="font-size: 15px; color: #66fcf1; text-shadow: 0 0 8px #66fcf1; margin-bottom: 20px; display: none;">Bạn đã làm rất tốt, chơi trên điện thoại dễ hơn nhiều!</p>
+        <p style="font-size: 18px; font-family: 'Orbitron', sans-serif;">Thành tích lượt này: <span id="final-score">0</span></p>
+        <p style="font-size: 18px; color: #f72585; font-weight:bold; margin-bottom: 15px; text-shadow: 0 0 10px rgba(247,37,133,0.5); font-family: 'Orbitron', sans-serif;">🏆 Kỷ Lục Cá Nhân: <span id="go-highscore">0</span></p>
+        <p id="pc-encouragement" style="font-size: 14px; color: #66fcf1; text-shadow: 0 0 8px #66fcf1; margin-bottom: 20px; display: none; font-family: 'Orbitron', sans-serif;">Bạn đã làm rất tốt, chơi trên điện thoại dễ hơn nhiều!</p>
         <button id="restart-btn" class="btn-orange" style="width: auto;">Chơi Lại Cùng Nhau</button>
         <button id="home-btn" class="btn-gray" style="width: auto;">Về Sảnh Chờ</button>
     </div>
@@ -167,7 +171,7 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // URL Google Apps Script mới trực tiếp không cần mã hóa
+        // URL Google Apps Script chính thức
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxZrYN0690PqOrQddeOEsjoR9xvT-RAm__pKJ_sznSlKWKyoeyR9-yrnx4ivAxgS6BDSw/exec";
 
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
@@ -325,7 +329,12 @@
             if(targetId) { await requestMic(); document.getElementById('connect-btn').innerText = "Đang kết nối..."; conn = peer.connect(targetId); setupConnection(); conn.on('open', () => { document.getElementById('connect-btn').innerText = "Đã tìm thấy!"; conn.send({ type: 'ready' }); }); }
         };
 
-        document.getElementById('solo-btn').onclick = async () => { saveProfile(); await requestMic(); startGame(Math.random()); };
+        // Chế độ chơi 1 mình trực tiếp
+        document.getElementById('solo-btn').onclick = async () => { 
+            saveProfile(); 
+            await requestMic(); 
+            startGame(Math.random(), true); // Bật cờ isSolo = true
+        };
 
         function showToast(text, color) {
             const toast = document.getElementById('toast-msg');
@@ -336,10 +345,14 @@
 
         function setupConnection() {
             conn.on('data', (data) => {
-                if (data.type === 'ready') { let seed = Math.floor(Math.random() * 99999); conn.send({ type: 'start', seed: seed }); startGame(seed); } 
-                else if (data.type === 'start') { startGame(data.seed); }
+                if (data.type === 'ready') { let seed = Math.floor(Math.random() * 99999); conn.send({ type: 'start', seed: seed }); startGame(seed, false); } 
+                else if (data.type === 'start') { startGame(data.seed, false); }
                 else if (data.type === 'update') { opponentData = data.player; document.getElementById('opp-name').innerText = opponentData.name || 'Đồng đội'; document.getElementById('opp-score').innerText = opponentData.score; }
-                else if (data.type === 'revive') { player.isDead = false; player.vy = -baseJump * 1.5; player.x = oppRender.x; player.y = oppRender.y - 150; showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585"); }
+                else if (data.type === 'revive') { 
+                    // Chế độ mạng: Đồng đội ăn trái tim cứu mạng khi chết
+                    player.isDead = false; player.vy = -baseJump * 1.5; player.x = oppRender.x; player.y = oppRender.y - 150; 
+                    showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585"); 
+                }
                 else if (data.type === 'slow') { slowTime = 300; }
             });
             conn.on('close', () => { alert("Đồng đội đã ngắt kết nối!"); window.location.reload(); });
@@ -349,21 +362,37 @@
         
         document.getElementById('restart-btn').addEventListener('click', () => {
             let seed = Math.floor(Math.random() * 99999);
-            if (conn && conn.open) conn.send({ type: 'start', seed: seed }); startGame(seed);
+            if (conn && conn.open) {
+                conn.send({ type: 'start', seed: seed }); 
+                startGame(seed, false);
+            } else {
+                startGame(seed, true); // Chơi lại 1 mình
+            }
         });
 
         const gravity = 0.3; const baseJump = 11; const PLATFORM_H = 12; const MIN_JUMP = 7.5;        
         let player, platforms, score, isGameOver, gameLoopId, useGyro = false, gyroGamma = 0, cameraOffset = 0; 
         let slowTime = 0, particles = [], micTimeRemaining = 0; 
+        let isSoloMode = false; // Biến xác định đang chơi 1 mình
 
         function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
         
-        function startGame(seed) {
+        function startGame(seed, solo = false) {
+            isSoloMode = solo;
             isLobby = false; cancelAnimationFrame(lobbyAnimId);
             document.getElementById('mp-lobby').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'block'; document.getElementById('top-right-controls').style.display = 'flex';
-            if(conn && conn.open) document.getElementById('opp-score-container').style.display = 'block';
+            
+            // Nếu chơi 1 mình thì ẩn khung điểm đồng đội, hiển thị số mạng sống (bắt đầu với 1 mạng)
+            if (isSoloMode || !conn || !conn.open) {
+                document.getElementById('opp-score-container').style.display = 'none';
+                document.getElementById('heart-display').style.display = 'block';
+            } else {
+                document.getElementById('opp-score-container').style.display = 'block';
+                document.getElementById('heart-display').style.display = 'none'; // Chế độ đôi dùng tim cứu mạng đồng đội
+            }
+
             initGame(seed);
         }
 
@@ -371,8 +400,10 @@
             score = 0; isGameOver = false; cameraOffset = 0; particles = []; slowTime = 0; micTimeRemaining = 0;
             opponentData = null; oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0 }; 
 
-            player = { x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, w: 30, h: 30, vy: 0, jumpPower: baseJump, colorStage: 0, squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1, isDead: false, webTarget: null, micCount: 0 };
+            // Khởi tạo player với số mạng mặc định là 1 (tối đa 4)
+            player = { x: canvas.width / 2 - 15, y: canvas.height / 2, targetX: canvas.width / 2 - 15, w: 30, h: 30, vy: 0, jumpPower: baseJump, colorStage: 0, squash: 1.0, angle: 0, flipAngle: 0, flipDir: 1, isDead: false, webTarget: null, micCount: 0, hearts: 1 };
             document.getElementById('mic-counter').innerText = `🎤: 0/3`;
+            document.getElementById('heart-count').innerText = player.hearts;
 
             platforms = [];
             platforms.push({ x: canvas.width/2 - PLATFORM_W/2, y: canvas.height - 100, w: PLATFORM_W, h: PLATFORM_H, visited: true, dx: 0, hp: 6, hasRevive: false, hasShrink: false, hasSnow: false, hasWeb: false, hasMic: false, broken: false });
@@ -456,7 +487,28 @@
                     if (player.flipAngle > 0) { let spinSpeed = 0.25; player.angle += spinSpeed * player.flipDir; player.flipAngle -= spinSpeed; if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; } }
 
                     if (player.y > canvas.height) {
-                        player.isDead = true; player.h = 30; player.colorStage = 0; player.jumpPower = baseJump; player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); 
+                        // Rơi xuống vực kiểm tra chế độ 1 mình hay đôi
+                        if (isSoloMode || !conn || !conn.open) {
+                            if (player.hearts > 1) {
+                                // Tiêu hao 1 mạng để hồi sinh ngay tại chỗ bật lên
+                                player.hearts--;
+                                document.getElementById('heart-count').innerText = player.hearts;
+                                player.y = canvas.height - 150;
+                                player.vy = -player.jumpPower * 1.5;
+                                spawnExplosion(player.x + 15, canvas.height - 20, '#f72585');
+                                showToast(`💔 MẤT 1 MẠNG! CÒN ${player.hearts} MẠNG 💔`, "#f72585");
+                            } else {
+                                // Hết mạng -> Game Over thực sự
+                                player.hearts = 0;
+                                document.getElementById('heart-count').innerText = 0;
+                                player.isDead = true; player.h = 30; player.colorStage = 0; player.jumpPower = baseJump; player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; 
+                                spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); 
+                            }
+                        } else {
+                            // Chế độ chơi đôi: chết ngay chờ đồng đội cứu
+                            player.isDead = true; player.h = 30; player.colorStage = 0; player.jumpPower = baseJump; player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; 
+                            spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); 
+                        }
                     }
                 }
             } else {
@@ -467,7 +519,7 @@
 
             if (conn && conn.open) { conn.send({ type: 'update', player: { name: myName, x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score, h: player.h, colorStage: player.colorStage } }); }
 
-            if (player.isDead && (!conn || !conn.open || (opponentData && opponentData.isDead))) { gameOver(); return; }
+            if (player.isDead && (isSoloMode || !conn || !conn.open || (opponentData && opponentData.isDead))) { gameOver(); return; }
 
             for (let i = 0; i < platforms.length; i++) {
                 let p = platforms[i]; if (p.broken) continue; 
@@ -480,7 +532,26 @@
                             p.hp--; if (p.hp <= 0) { p.broken = true; spawnExplosion(p.x + p.w/2, p.y, p.dx !== 0 ? '#f72585' : '#45a29e'); }
 
                             if (p.hasMic) { p.hasMic = false; player.micCount++; document.getElementById('mic-counter').innerText = `🎤: ${player.micCount}/3`; if (player.micCount >= 3) { player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; micTimeRemaining = 120; showToast("🎤 THỔI MẠNH ĐỂ BAY! 🎤", "#ff0055"); } }
-                            if (p.hasRevive) { p.hasRevive = false; if (conn && conn.open && opponentData && opponentData.isDead) { conn.send({ type: 'revive' }); showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585"); } }
+                            if (p.hasRevive) { 
+                                p.hasRevive = false; 
+                                if (isSoloMode || !conn || !conn.open) {
+                                    // Chế độ 1 mình: Ăn trái tim cộng thêm 1 mạng (tối đa 4 mạng)
+                                    if (player.hearts < 4) {
+                                        player.hearts++;
+                                        document.getElementById('heart-count').innerText = player.hearts;
+                                        showToast(`💖 NHẬN MẠNG! TỔNG: ${player.hearts}/4 MẠNG 💖`, "#f72585");
+                                        spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585');
+                                    } else {
+                                        showToast("💖 ĐÃ ĐẠT TỐI ĐA 4 MẠNG! 💖", "#f72585");
+                                    }
+                                } else {
+                                    // Chế độ đôi: Cứu mạng đồng đội qua mạng
+                                    if (opponentData && opponentData.isDead) { 
+                                        conn.send({ type: 'revive' }); 
+                                        showToast("💖 Cứu một mạng bằng xây 7 tháp! 💖", "#f72585"); 
+                                    }
+                                }
+                            }
                             if (p.hasShrink) { p.hasShrink = false; spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff'); score = Math.max(0, score - 20); checkEvol(); }
                             if (p.hasSnow) { p.hasSnow = false; slowTime = 300; showToast("❄️ ĐÓNG BĂNG THỜI GIAN! ❄️", "#80d0ff"); if(conn && conn.open) conn.send({type: 'slow'}); }
                             if (p.hasWeb) { p.hasWeb = false; let targetIdx = Math.min(i + 8, platforms.length - 1); player.webTarget = platforms[targetIdx]; showToast("🕸️ NGƯỜI NHỆN! 🕸️", "#fff"); for(let j = i; j <= targetIdx; j++) { if(!platforms[j].visited) { platforms[j].visited = true; score++; } } checkEvol(); }
@@ -506,7 +577,7 @@
         function drawEntity(entity, isOpponent = false) {
             if (entity.isDead) {
                 ctx.font = "30px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.shadowBlur = 15; ctx.shadowColor = '#fff'; ctx.fillText("💀", entity.x + 15, entity.y + 15); ctx.shadowBlur = 0; 
-                let floatOffset = Math.sin(Date.now() / 150) * 5; ctx.font = "bold 14px Courier New"; ctx.fillStyle = "#ff9f1c"; ctx.fillText("ê cứu tui", entity.x + 15, entity.y - 15 + floatOffset);
+                let floatOffset = Math.sin(Date.now() / 150) * 5; ctx.font = "bold 14px 'Orbitron', Courier New"; ctx.fillStyle = "#ff9f1c"; ctx.fillText("ê cứu tui", entity.x + 15, entity.y - 15 + floatOffset);
                 return;
             }
             let colorMain = isOpponent ? getPlayerColor(entity.colorStage) : getPlayerColor(entity.colorStage);
@@ -519,8 +590,8 @@
                 if (oppScreenY < 0 || oppScreenY > canvas.height) {
                     let color = getPlayerColor(oppRender.colorStage); ctx.save(); ctx.fillStyle = color; ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.beginPath();
                     let nameDisplay = opponentData.name || "ĐỒNG ĐỘI";
-                    if (oppScreenY < 0) { ctx.moveTo(oppScreenX, 20); ctx.lineTo(oppScreenX - 12, 40); ctx.lineTo(oppScreenX + 12, 40); ctx.fill(); ctx.font = "bold 12px Courier New"; ctx.textAlign = "center"; ctx.fillText(nameDisplay, oppScreenX, 55); } 
-                    else { ctx.moveTo(oppScreenX, canvas.height - 20); ctx.lineTo(oppScreenX - 12, canvas.height - 40); ctx.lineTo(oppScreenX + 12, canvas.height - 40); ctx.fill(); ctx.font = "bold 12px Courier New"; ctx.textAlign = "center"; ctx.fillText(nameDisplay, oppScreenX, canvas.height - 55); }
+                    if (oppScreenY < 0) { ctx.moveTo(oppScreenX, 20); ctx.lineTo(oppScreenX - 12, 40); ctx.lineTo(oppScreenX + 12, 40); ctx.fill(); ctx.font = "bold 12px 'Orbitron', Courier New"; ctx.textAlign = "center"; ctx.fillText(nameDisplay, oppScreenX, 55); } 
+                    else { ctx.moveTo(oppScreenX, canvas.height - 20); ctx.lineTo(oppScreenX - 12, canvas.height - 40); ctx.lineTo(oppScreenX + 12, canvas.height - 40); ctx.fill(); ctx.font = "bold 12px 'Orbitron', Courier New"; ctx.textAlign = "center"; ctx.fillText(nameDisplay, oppScreenX, canvas.height - 55); }
                     ctx.restore();
                 }
             }
@@ -537,7 +608,7 @@
                 
                 ctx.globalAlpha = p.dx === 0 ? (p.hp / 6) * 0.5 + 0.5 : (p.hp / 3) * 0.5 + 0.5; ctx.fillRect(p.x, p.y, p.w, p.h); ctx.globalAlpha = 1.0;
                 let bounce = Math.sin(Date.now() / 200) * 5;
-                ctx.font = "bold 10px Courier New"; ctx.fillStyle = "#0b0c10"; ctx.fillText(p.hp, p.x + p.w / 2, p.y + 10);
+                ctx.font = "bold 10px 'Orbitron', Courier New"; ctx.fillStyle = "#0b0c10"; ctx.fillText(p.hp, p.x + p.w / 2, p.y + 10);
                 
                 ctx.font = "24px Arial";
                 if (p.hasMic) { ctx.shadowBlur = 15; ctx.shadowColor = '#ff0055'; ctx.fillText("🎤", p.x + p.w / 2, p.y - 15 + bounce); }
