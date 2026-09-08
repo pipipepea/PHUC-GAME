@@ -188,10 +188,11 @@
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxZrYN0690PqOrQddeOEsjoR9xvT-RAm__pKJ_sznSlKWKyoeyR9-yrnx4ivAxgS6BDSw/exec";
 
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        resizeCanvas();
 
         const basePlatformW = 95;
-        const PLATFORM_W = window.innerWidth >= 768 ? basePlatformW * 1.68 : basePlatformW * 0.6;
+        let PLATFORM_W = window.innerWidth >= 768 ? basePlatformW * 1.68 : basePlatformW * 0.6;
 
         let lobbyAnimId;
         let isLobby = true;
@@ -259,7 +260,7 @@
         function submitScore(name, score) {
             if (!GOOGLE_SHEET_URL || score <= 0) return;
             let safeName = encodeURIComponent(name);
-            let token = btoa(score + "_PT_SECRET_2026");
+            let token = btoa(`${Math.floor(score)}_PT_SECRET_2026`);
             let fetchUrl = `${GOOGLE_SHEET_URL}?action=add&name=${safeName}&score=${score}&token=${token}`;
             
             fetch(fetchUrl, { mode: 'no-cors' }).then(res => console.log("Đã lưu điểm an toàn")).catch(err => console.log(err));
@@ -277,7 +278,10 @@
                     if (!entries || entries.length === 0) { lbContent.innerHTML = `<div class="lb-loading">Bảng xếp hạng trống!</div>`; return; }
                     entries.forEach((entry, index) => {
                         let row = document.createElement('div'); row.className = 'lb-entry';
-                        row.innerHTML = `<div class="lb-rank">#${index + 1}</div><div class="lb-name">${entry.name}</div><div class="lb-score">${entry.score}</div>`;
+                        let rank = document.createElement('div'); rank.className = 'lb-rank'; rank.textContent = `#${index + 1}`;
+                        let name = document.createElement('div'); name.className = 'lb-name'; name.textContent = String(entry.name || 'Người Chơi').slice(0, 12);
+                        let points = document.createElement('div'); points.className = 'lb-score'; points.textContent = String(Math.max(0, Number(entry.score) || 0));
+                        row.append(rank, name, points);
                         lbContent.appendChild(row);
                     });
                 })
@@ -410,10 +414,13 @@
 
         const gravity = 0.3; const baseJump = 11; const PLATFORM_H = 12; const MIN_JUMP = 7.5;        
         let player, platforms, score, isGameOver, gameLoopId, useGyro = false, gyroGamma = 0, cameraOffset = 0; 
-        let slowTime = 0, particles = [], trailPoints = [], micTimeRemaining = 0; 
+        let slowTime = 0, particles = [], trailPoints = [], micTimeRemaining = 0;
+        let lastFrameTime = performance.now(), accumulator = 0, networkTimer = 0;
+        const FIXED_DT = 1000 / 60;
+        const MAX_PARTICLES = 180; 
         let isSoloMode = false; 
 
-        function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
+        function spawnExplosion(x, y, color) { for(let i = 0; i < 25 && particles.length < MAX_PARTICLES; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
 
         function startCountdown(seed, solo = false) {
@@ -496,7 +503,11 @@
                 let hasRocket = (rng() < 0.08) && !hasHeart && !hasShrink && !hasSnow && !hasWeb && !hasMic && i > 5; 
                 let hasSword = (rng() < 0.03) && !hasHeart && !hasShrink && !hasSnow && !hasWeb && !hasMic && !hasRocket && i > 25; 
 
-                let p1X = rng() * (canvas.width - PLATFORM_W);
+                let previous = platforms[platforms.length - 1];
+                let maxHorizontal = Math.max(45, Math.min(canvas.width - PLATFORM_W, simJump * 7));
+                let minX = Math.max(0, previous.x - maxHorizontal);
+                let maxX = Math.min(canvas.width - PLATFORM_W, previous.x + previous.w + maxHorizontal);
+                let p1X = minX + rng() * Math.max(1, maxX - minX);
                 platforms.push({ x: p1X, y: currentY, w: PLATFORM_W, h: PLATFORM_H, hp: hp, broken: false, visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink, hasSnow: hasSnow, hasWeb: hasWeb, hasMic: hasMic, hasRocket: hasRocket, hasSword: hasSword });
                 if (rng() < 0.7) {
                     let p2X = (p1X + canvas.width / 2) % (canvas.width - PLATFORM_W); let p2Y = currentY + (rng() * 40 - 20); 
@@ -620,7 +631,8 @@
                     if (Math.abs(player.y - ty) < 15) { player.webTarget.visited = true; player.webTarget = null; player.vy = -player.jumpPower * 1.5; }
                 } else {
                     if (useGyro) player.targetX = player.x + ((gyroGamma / 45) * 15);
-                    player.x += (player.targetX - player.x) * (useGyro ? 0.85 : 0.5);
+                    let controlEase = useGyro ? 0.22 : 0.18;
+                    player.x += (player.targetX - player.x) * controlEase;
                     if (player.x > canvas.width) player.x = -player.w; if (player.x + player.w < 0) player.x = canvas.width;
                     player.vy += gravity; player.y += player.vy; player.squash += (1.0 - player.squash) * 0.15;
                     
@@ -666,7 +678,9 @@
 
             for (let i = particles.length - 1; i >= 0; i--) { let pt = particles[i]; pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.04; if (pt.life <= 0) particles.splice(i, 1); }
 
-            if (conn && conn.open) { 
+            networkTimer++;
+            if (conn && conn.open && networkTimer >= 4) {
+                networkTimer = 0;
                 conn.send({ 
                     type: 'update', 
                     player: { 
@@ -938,7 +952,8 @@
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
         canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
-        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+        window.addEventListener('resize', () => { function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        resizeCanvas(); });
     </script>
 </body>
 </html>
