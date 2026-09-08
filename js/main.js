@@ -7,11 +7,33 @@ function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10),
 
 function LCG(seed) { return function() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; } }
 
+// Cập nhật hàm showToast mới: Thêm viền Neon và bóng đổ
 function showToast(text, color) {
     const toast = document.getElementById('toast-msg');
-    toast.innerText = text; toast.style.color = color; toast.style.textShadow = `0 0 20px ${color}`;
-    toast.style.opacity = '1'; toast.style.transform = 'translate(-50%, -80%) scale(1.2)';
-    setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, -50%) scale(1)'; }, 2000);
+    toast.innerText = text; 
+    toast.style.color = color; 
+    toast.style.textShadow = `0 0 8px ${color}`;
+    toast.style.border = `2px solid ${color}`;
+    toast.style.boxShadow = `0 0 15px ${color}, inset 0 0 10px ${color}`;
+    toast.style.opacity = '1'; 
+    toast.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+    
+    // Xóa bộ đếm cũ nếu có thông báo mới đè lên
+    if (window.toastTimeout) clearTimeout(window.toastTimeout);
+    window.toastTimeout = setTimeout(() => { 
+        toast.style.opacity = '0'; 
+        toast.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)'; 
+    }, 2000);
+}
+
+// Hàm kích hoạt hiệu ứng phát sáng UI
+function triggerUIEffect(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.classList.remove('stat-pulse');
+        void el.offsetWidth; // Ép trình duyệt reset lại animation ngay lập tức
+        el.classList.add('stat-pulse');
+    }
 }
 
 function saveProfile() {
@@ -125,7 +147,7 @@ const gyroBtn = document.getElementById('gyro-btn');
 function handleOrientation(e) { let gamma = e.gamma; if (gamma > 45) gamma = 45; if (gamma < -45) gamma = -45; gyroGamma = gamma; }
 function enableGyro() { useGyro = true; gyroBtn.classList.add('gyro-active'); window.addEventListener('deviceorientation', handleOrientation); showToast("📱 Bật cảm biến lắc: ĐIỂM GẤP ĐÔI! ⚡", "#2ecc71"); }
 gyroBtn.onclick = () => {
-    if (useGyro) { useGyro = false; gyroBtn.classList.remove('gyro-active'); window.removeEventListener('deviceorientation', handleOrientation); player.targetX = player.x; showToast("📱 Đã tắt cảm biến lắc (Điểm chuẩn)", "#66fcf1"); } 
+    if (useGyro) { useGyro = false; gyroBtn.classList.remove('gyro-active'); window.removeEventListener('deviceorientation', handleOrientation); player.targetX = player.x; showToast("📱 Đã tắt cảm biến lắc", "#66fcf1"); } 
     else { if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') { DeviceOrientationEvent.requestPermission().then(state => { if (state === 'granted') enableGyro(); }).catch(console.error); } else { enableGyro(); } }
 };
 function handleMovement(xClient) { if(!isGameOver && !useGyro && !player.isDead) player.targetX = xClient - player.w / 2; }
