@@ -98,15 +98,46 @@ function draw() {
 
 function lobbyLoop() {
     if (!isLobby) return;
-    ctx.fillStyle = 'rgba(11, 12, 16, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    lobbyPlayer.vy += lobbyPlayer.gravity; lobbyPlayer.y += lobbyPlayer.vy; lobbyPlayer.x += 1.2 * lobbyPlayer.dir; lobbyPlayer.angle += 0.05 * lobbyPlayer.dir;
-    if (lobbyPlayer.y > lobbyPlayer.baseY + 50) { lobbyPlayer.y = lobbyPlayer.baseY + 50; lobbyPlayer.vy = -lobbyPlayer.jumpPower; lobbyPlayer.angle = 0; if (lobbyPlayer.x > canvas.width / 2 + 20) lobbyPlayer.dir = -1; if (lobbyPlayer.x < canvas.width / 2 - 80) lobbyPlayer.dir = 1; }
+    ctx.fillStyle = 'rgba(11, 12, 16, 0.4)'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     const profileBox = document.getElementById('profile-box');
-    if (profileBox) { const rect = profileBox.getBoundingClientRect(); lobbyFriend.x = rect.right - 28; lobbyFriend.y = rect.top - 20; }
+    if (profileBox) { 
+        const rect = profileBox.getBoundingClientRect(); 
+        
+        // Cố định nhân vật cam (Đồng đội) ngồi im ở góc phải
+        lobbyFriend.x = rect.right - 28; 
+        lobbyFriend.y = rect.top - 20; 
+        
+        // Ép nhân vật xanh (Bạn) bám sát theo mép trên của hộp hồ sơ
+        lobbyPlayer.baseY = rect.top - 20; 
+        
+        // Căn chỉnh giới hạn để nhân vật chỉ nhảy quanh quẩn từ mép trái đến giữa hộp
+        let leftBound = rect.left + 20;
+        let rightBound = rect.left + rect.width / 2;
+        
+        if (lobbyPlayer.x > rightBound) lobbyPlayer.dir = -1;
+        if (lobbyPlayer.x < leftBound) lobbyPlayer.dir = 1;
+    }
+
+    // Vật lý rơi và xoay của nhân vật xanh
+    lobbyPlayer.vy += lobbyPlayer.gravity; 
+    lobbyPlayer.y += lobbyPlayer.vy; 
+    lobbyPlayer.x += 1.2 * lobbyPlayer.dir; 
+    lobbyPlayer.angle += 0.05 * lobbyPlayer.dir;
+    
+    // Khi chạm đúng viền hộp thì nảy lên
+    if (lobbyPlayer.y > lobbyPlayer.baseY) { 
+        lobbyPlayer.y = lobbyPlayer.baseY; 
+        lobbyPlayer.vy = -lobbyPlayer.jumpPower; 
+        lobbyPlayer.angle = 0; 
+    }
+    
     lobbyFriend.angle = Math.sin(Date.now() / 300) * 0.1;
     
+    // Vẽ hai nhân vật
     drawEntityRaw(ctx, lobbyPlayer.x, lobbyPlayer.y, lobbyPlayer.w, lobbyPlayer.h, lobbyPlayer.angle, lobbyPlayer.vy, '#66fcf1', false);
     drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.w, lobbyFriend.h, lobbyFriend.angle, 0, '#ff9f1c', true);
+    
     lobbyAnimId = requestAnimationFrame(lobbyLoop);
 }
