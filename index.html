@@ -369,11 +369,12 @@
                     document.getElementById('opp-score').innerText = opponentData.score; 
                 }
                 else if (data.type === 'revive') { 
-                    // Đồng đội đã ăn tim và truyền tín hiệu hồi sinh cho mình tại vị trí hiện tại của họ
+                    // Nhận tín hiệu hồi sinh từ bạn: Hồi sinh tại chỗ và bị trừ 20 điểm
                     player.isDead = false; 
                     player.vy = -baseJump * 1.5; 
-                    player.x = oppRender.x; // Hồi sinh ngay tại vị trí đồng đội vừa ăn tim
-                    showToast("💖 BẠN ĐÃ ĐƯỢC ĐỒNG ĐỘI HỒI SINH! 💖", "#f72585"); 
+                    score = Math.max(0, score - 20);
+                    document.getElementById('score').innerText = score;
+                    showToast("💖 BẠN ĐÃ ĐƯỢC ĐỒNG ĐỘI CỨU SỐNG (-20 ĐIỂM)! 💖", "#ff9f1c"); 
                 }
                 else if (data.type === 'slow') { 
                     slowTime = 300; 
@@ -539,7 +540,6 @@
                 if (average > 60) { player.vy -= 1.2; if (player.vy < -player.jumpPower * 1.5) player.vy = -player.jumpPower * 1.5; spawnExhaust(player.x + 15, player.y + player.h); }
             }
 
-            // Đồng bộ mượt mà vị trí đồng đội qua mạng
             if (opponentData) {
                 let targetOppScreenY = opponentData.worldY + cameraOffset;
                 oppRender.x += (opponentData.x - oppRender.x) * 0.7; 
@@ -549,9 +549,6 @@
                 oppRender.vy = opponentData.vy; 
                 oppRender.isDead = opponentData.isDead; 
                 oppRender.h = opponentData.h; 
-                if (opponentData.colorStage > oppRender.colorStage) { 
-                    spawnExplosion(oppRender.x + 15, oppRender.y + oppRender.h / 2, getPlayerColor(opponentData.colorStage)); 
-                }
                 oppRender.colorStage = opponentData.colorStage;
             }
 
@@ -598,7 +595,6 @@
                     }
                 }
             } else {
-                // Nếu mình đã chết mà đồng đội còn sống, camera tự động flow theo người chơi còn lại
                 if (opponentData && !opponentData.isDead) { 
                     player.x = oppRender.x; 
                     player.y = oppRender.y; 
@@ -625,7 +621,7 @@
                 }); 
             }
 
-            // Kiểm tra điều kiện Game Over: Chế độ 1 mình hết mạng HOẶC chế độ 2 người mà CẢ HAI ĐỀU ĐÃ CHẾT
+            // Kiểm tra kết thúc trò chơi (Chế độ đơn: mình chết là xong. Chế độ đôi: cả hai cùng chết mới hiện thông báo)
             if (isSoloMode || !conn || !conn.open) {
                 if (player.isDead) { gameOver(); return; }
             } else {
@@ -676,10 +672,10 @@
                                         spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585');
                                     }
                                 } else {
-                                    // Chế độ 2 người: Khi người chơi còn sống ăn tim, người chết sẽ hồi sinh ngay lập tức cùng vị trí
+                                    // Chế độ đôi: Người chơi còn sống ăn tim sẽ hồi sinh người chết và trừ 20 điểm của người được cứu
                                     if (opponentData && opponentData.isDead) { 
                                         conn.send({ type: 'revive' }); 
-                                        showToast("💖 BẠN ĐÃ CỨU SỐNG ĐỒNG ĐỘI! 💖", "#f72585"); 
+                                        showToast("💖 BẠN ĐÃ CỨU SỐNG ĐỒNG ĐỘI (-20 ĐIỂM)! 💖", "#ff9f1c"); 
                                     } else {
                                         showToast("💖 NHẶT ĐƯỢC TRÁI TIM MAY MẮN! 💖", "#f72585");
                                     }
@@ -723,7 +719,7 @@
                 }
             }
 
-            // Quản lý camera flow linh hoạt: Nếu mình chết nhưng đồng đội còn sống, camera scroll theo đồng đội
+            // Camera cuốn theo người chơi còn sống
             let focusY = player.y; 
             if (player.isDead && opponentData && !opponentData.isDead) { 
                 focusY = oppRender.y; 
@@ -736,13 +732,14 @@
             draw(); gameLoopId = requestAnimationFrame(loop);
         }
 
+        // Người chơi thứ 2 hiển thị màu neon cam vàng (#ff9f1c) để phân biệt
         function drawEntity(entity, isOpponent = false) {
             if (entity.isDead) {
                 ctx.font = "30px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.shadowBlur = 15; ctx.shadowColor = '#fff'; ctx.fillText("💀", entity.x + 15, entity.y + 15); ctx.shadowBlur = 0; 
                 let floatOffset = Math.sin(Date.now() / 150) * 5; ctx.font = "bold 14px 'Orbitron', Courier New"; ctx.fillStyle = "#ff9f1c"; ctx.fillText("ê cứu tui", entity.x + 15, entity.y - 15 + floatOffset);
                 return;
             }
-            let colorMain = isOpponent ? getPlayerColor(entity.colorStage) : getPlayerColor(entity.colorStage);
+            let colorMain = isOpponent ? '#ff9f1c' : getPlayerColor(entity.colorStage);
             drawEntityRaw(ctx, entity.x + 15, entity.y + (entity.h || 30) / 2, 30, entity.h || 30, entity.angle, entity.vy, colorMain, false);
         }
 
@@ -750,7 +747,7 @@
             if (opponentData && !opponentData.isDead) {
                 let oppScreenX = oppRender.x + 15; let oppScreenY = oppRender.y + 15;
                 if (oppScreenY < 0 || oppScreenY > canvas.height) {
-                    let color = getPlayerColor(oppRender.colorStage); ctx.save(); ctx.fillStyle = color; ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.beginPath();
+                    ctx.save(); ctx.fillStyle = '#ff9f1c'; ctx.shadowBlur = 15; ctx.shadowColor = '#ff9f1c'; ctx.beginPath();
                     let nameDisplay = opponentData.name || "ĐỒNG ĐỘI";
                     if (oppScreenY < 0) { ctx.moveTo(oppScreenX, 20); ctx.lineTo(oppScreenX - 12, 40); ctx.lineTo(oppScreenX + 12, 40); ctx.fill(); ctx.font = "bold 12px 'Orbitron', Courier New"; ctx.textAlign = "center"; ctx.fillText(nameDisplay, oppScreenX, 55); } 
                     else { ctx.moveTo(oppScreenX, canvas.height - 20); ctx.lineTo(oppScreenX - 12, canvas.height - 40); ctx.lineTo(oppScreenX + 12, canvas.height - 40); ctx.fill(); ctx.font = "bold 12px 'Orbitron', Courier New"; ctx.textAlign = "center"; ctx.fillText(nameDisplay, oppScreenX, canvas.height - 55); }
