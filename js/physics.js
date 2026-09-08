@@ -1,3 +1,6 @@
+// Danh sách các emoji khuôn mặt biểu cảm ngẫu nhiên
+const FACE_EMOJIS = ["😀", "😎", "🤩", "🤪", "🥶", "😡", "🧐", "🤠", "😈", "🥳", "🤖", "👽"];
+
 function updatePhysics() {
     if (slowTime > 0) slowTime--; 
     if (micTimeRemaining > 0) micTimeRemaining--;
@@ -26,7 +29,9 @@ function updatePhysics() {
         oppRender.squash += (opponentData.squash - oppRender.squash) * 0.5; 
         oppRender.angle += (opponentData.angle - oppRender.angle) * 0.5;
         oppRender.vy = opponentData.vy; oppRender.isDead = opponentData.isDead; oppRender.h = opponentData.h; 
-        oppRender.colorStage = opponentData.colorStage; oppRender.berserkTimer = opponentData.berserkTimer; oppRender.trail = opponentData.trail || [];
+        oppRender.colorStage = opponentData.colorStage; oppRender.berserkTimer = opponentData.berserkTimer; 
+        oppRender.currentEmoji = opponentData.currentEmoji || "🤖"; // Đồng bộ khuôn mặt đồng đội
+        oppRender.trail = opponentData.trail || [];
     }
 
     if (!player.isDead && opponentData && opponentData.berserkTimer > 0 && opponentData.trail && opponentData.trail.length > 0) {
@@ -72,7 +77,24 @@ function updatePhysics() {
     networkTimer++;
     if (conn && conn.open && networkTimer >= 4) {
         networkTimer = 0;
-        conn.send({ type: 'update', player: { name: myName, x: player.x, worldY: player.y - cameraOffset, vy: player.vy, squash: player.squash, angle: player.angle, isDead: player.isDead, score: score, h: player.h, colorStage: player.colorStage, berserkTimer: player.berserkTimer, trail: trailPoints.map(pt => ({ x: pt.x, y: pt.y - cameraOffset })) } }); 
+        conn.send({ 
+            type: 'update', 
+            player: { 
+                name: myName, 
+                x: player.x, 
+                worldY: player.y - cameraOffset, 
+                vy: player.vy, 
+                squash: player.squash, 
+                angle: player.angle, 
+                isDead: player.isDead, 
+                score: score, 
+                h: player.h, 
+                colorStage: player.colorStage, 
+                berserkTimer: player.berserkTimer,
+                currentEmoji: player.currentEmoji, // Gửi emoji khuôn mặt qua mạng
+                trail: trailPoints.map(pt => ({ x: pt.x, y: pt.y - cameraOffset })) 
+            } 
+        }); 
     }
 
     for (let i = 0; i < platforms.length; i++) {
@@ -84,34 +106,60 @@ function updatePhysics() {
                 if (player.x + player.w > p.x - 5 && player.x < p.x + p.w + 5) {
                     p.hp--; if (p.hp <= 0) { p.broken = true; spawnExplosion(p.x + p.w/2, p.y, p.dx !== 0 ? '#f72585' : '#45a29e'); }
                     
+                    // --- XỬ LÝ KHI NHẶT BẤT KỲ ITEM NÀO: ĐỔI EMOJI NGẪU NHIÊN ---
+                    let hasInteracted = false;
+                    let newFace = FACE_EMOJIS[Math.floor(Math.random() * FACE_EMOJIS.length)];
+
                     if (p.hasMic) { 
-                        p.hasMic = false; player.micCount++; 
+                        p.hasMic = false; player.micCount++; hasInteracted = true;
                         document.getElementById('mic-counter').innerText = `🎤: ${player.micCount}/3`; 
                         triggerUIEffect('mic-counter');
                         if (player.micCount >= 3) { player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; micTimeRemaining = 120; showToast("🎤 THỔI MẠNH ĐỂ BAY! 🎤", "#ff0055"); } 
+                        else { showToast("🎤 NHẬT MIC", "#ff0055"); }
                     }
                     if (p.hasRocket) {
-                        p.hasRocket = false; player.rocketCount++; document.getElementById('rocket-count').innerText = player.rocketCount; 
+                        p.hasRocket = false; player.rocketCount++; hasInteracted = true;
+                        document.getElementById('rocket-count').innerText = player.rocketCount; 
                         spawnExplosion(p.x + p.w / 2, p.y - 15, '#ff5500');
                         triggerUIEffect('rocket-counter');
                         if (player.rocketCount >= 6) { player.rocketCount = 0; document.getElementById('rocket-count').innerText = 0; player.rocketFlying = true; player.rocketStepsLeft = 60; showToast("🚀 TÊN LỬA KHỞI ĐỘNG! 🚀", "#ff5500"); } 
                         else { showToast(`🚀 THU TÊN LỬA (${player.rocketCount}/6)`, "#ff5500"); }
                     }
                     if (p.hasSword) { 
-                        p.hasSword = false; player.berserkTimer = 300; spawnExplosion(p.x + p.w / 2, p.y - 15, '#e74c3c'); 
+                        p.hasSword = false; player.berserkTimer = 300; hasInteracted = true;
+                        spawnExplosion(p.x + p.w / 2, p.y - 15, '#e74c3c'); 
                         triggerUIEffect('sword-counter');
                         showToast("⚔️ CHẾ ĐỘ CUỒNG SÁT! ⚔️", "#e74c3c"); 
                     }
                     if (p.hasRevive) { 
-                        p.hasRevive = false; 
+                        p.hasRevive = false; hasInteracted = true;
                         triggerUIEffect('heart-display');
                         if (isSoloMode || !conn || !conn.open) {
                             if (player.hearts < 4) { player.heartAccumulator++; if (player.heartAccumulator >= 2) { player.heartAccumulator = 0; player.hearts++; document.getElementById('heart-count').innerText = player.hearts; showToast(`💖 +1 MẠNG!`, "#f72585"); } else { showToast(`💖 MẢNH TIM (1/2)`, "#f72585"); } spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585'); }
                         } else { if (opponentData && opponentData.isDead) { conn.send({ type: 'revive' }); showToast("💖 ĐÃ CỨU ĐỒNG ĐỘI!", "#ff9f1c"); } else { showToast("💖 NHẶT ĐƯỢC TIM!", "#f72585"); } spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585'); }
                     }
-                    if (p.hasShrink) { p.hasShrink = false; spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff'); player.h = Math.max(15, player.h - 5); player.jumpPower += 1.5; showToast("⚡ THU NHỎ & TĂNG NHẢY!", "#00f0ff"); }
-                    if (p.hasSnow) { p.hasSnow = false; slowTime = 300; showToast("❄️ ĐÓNG BĂNG!", "#80d0ff"); if(conn && conn.open) conn.send({type: 'slow'}); }
-                    if (p.hasWeb) { p.hasWeb = false; let targetIdx = Math.min(i + 8, platforms.length - 1); player.webTarget = platforms[targetIdx]; showToast("🕸️ NGƯỜI NHỆN!", "#fff"); for(let j = i; j <= targetIdx; j++) { if(!platforms[j].visited) { platforms[j].visited = true; score += (useGyro ? 2 : 1); } } checkEvol(); }
+                    if (p.hasShrink) { 
+                        p.hasShrink = false; hasInteracted = true;
+                        spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff'); player.h = Math.max(15, player.h - 5); player.jumpPower += 1.5; 
+                        showToast("⚡ THU NHỎ & TĂNG NHẢY!", "#00f0ff"); 
+                    }
+                    if (p.hasSnow) { 
+                        p.hasSnow = false; slowTime = 300; hasInteracted = true;
+                        showToast("❄️ ĐÓNG BĂNG!", "#80d0ff"); 
+                        if(conn && conn.open) conn.send({type: 'slow'}); 
+                    }
+                    if (p.hasWeb) { 
+                        p.hasWeb = false; hasInteracted = true;
+                        let targetIdx = Math.min(i + 8, platforms.length - 1); player.webTarget = platforms[targetIdx]; 
+                        showToast("🕸️ NGƯỜI NHỆN!", "#fff"); 
+                        for(let j = i; j <= targetIdx; j++) { if(!platforms[j].visited) { platforms[j].visited = true; score += (useGyro ? 2 : 1); } } checkEvol(); 
+                    }
+
+                    // Nếu có tương tác nhặt item, cập nhật khuôn mặt ngẫu nhiên
+                    if (hasInteracted) {
+                        player.currentEmoji = newFace;
+                    }
+                    // -------------------------------------------------------------
 
                     if(!player.webTarget && !player.rocketFlying) {
                         player.vy = -player.jumpPower; player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0; player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
