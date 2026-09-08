@@ -175,7 +175,10 @@ gyroBtn.onclick = () => {
     if (useGyro) { useGyro = false; gyroBtn.classList.remove('gyro-active'); window.removeEventListener('deviceorientation', handleOrientation); player.targetX = player.x; showToast("📱 Đã tắt cảm biến lắc", "#66fcf1"); } 
     else { if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') { DeviceOrientationEvent.requestPermission().then(state => { if (state === 'granted') enableGyro(); }).catch(console.error); } else { enableGyro(); } }
 };
-function handleMovement(xClient) { if(!isGameOver && !useGyro && !player.isDead) player.targetX = xClient - player.w / 2; }
+function handleMovement(xClient) { 
+    if (!player || isGameOver || useGyro || player.isDead) return; 
+    player.targetX = xClient - player.w / 2; 
+}
 canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
 canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
 canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
