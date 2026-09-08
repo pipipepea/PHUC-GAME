@@ -369,12 +369,16 @@
                     document.getElementById('opp-score').innerText = opponentData.score; 
                 }
                 else if (data.type === 'revive') { 
-                    // Nhận tín hiệu hồi sinh từ bạn: Hồi sinh tại chỗ và bị trừ 20 điểm
+                    // Hồi sinh ngay tại vị trí hiện tại của người chơi còn lại vừa ăn tim, trừ 20 điểm
                     player.isDead = false; 
                     player.vy = -baseJump * 1.5; 
+                    if (opponentData) {
+                        player.x = opponentData.x;
+                        player.y = opponentData.worldY;
+                    }
                     score = Math.max(0, score - 20);
                     document.getElementById('score').innerText = score;
-                    showToast("💖 BẠN ĐÃ ĐƯỢC ĐỒNG ĐỘI CỨU SỐNG (-20 ĐIỂM)! 💖", "#ff9f1c"); 
+                    showToast("💖 ĐÃ ĐƯỢC CỨU SỐNG TẠI CHỖ (-20 ĐIỂM)! 💖", "#ff9f1c"); 
                 }
                 else if (data.type === 'slow') { 
                     slowTime = 300; 
@@ -397,12 +401,17 @@
 
         const gravity = 0.3; const baseJump = 11; const PLATFORM_H = 12; const MIN_JUMP = 7.5;        
         let player, platforms, score, isGameOver, gameLoopId, useGyro = false, gyroGamma = 0, cameraOffset = 0; 
-        let slowTime = 0, particles = [], micTimeRemaining = 0; 
+        let slowTime = 0, particles = [], trailParticles = [], micTimeRemaining = 0; 
         let isSoloMode = false; 
 
         function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
         
+        // Thêm hạt đuôi sáng neon với màu sắc thăng tiến theo cấp độ
+        function addTrail(x, y, color) {
+            trailParticles.push({ x: x + 15, y: y + 15, life: 1.0, color: color });
+        }
+
         function startCountdown(seed, solo = false) {
             isLobby = false; cancelAnimationFrame(lobbyAnimId);
             document.getElementById('mp-lobby').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
@@ -447,7 +456,7 @@
         }
 
         function initGame(seed) {
-            score = 0; isGameOver = false; cameraOffset = 0; particles = []; slowTime = 0; micTimeRemaining = 0;
+            score = 0; isGameOver = false; cameraOffset = 0; particles = []; trailParticles = []; slowTime = 0; micTimeRemaining = 0;
             opponentData = null; oppRender = { x: -100, y: -100, squash: 1, angle: 0, isDead: false, vy: 0, h: 30, colorStage: 0 }; 
 
             player = { 
@@ -527,8 +536,6 @@
             document.getElementById('score').innerText = score;
         }
 
-        function getPlayerColor(stage) { if (stage <= 0) return '#66fcf1'; if (stage === 1) return '#00ff00'; if (stage === 2) return '#fee440'; return `hsl(${Date.now() % 360}, 100%, 50%)`; }
-
         function loop() {
             if (isGameOver) return;
             if (slowTime > 0) slowTime--; if (micTimeRemaining > 0) micTimeRemaining--;
@@ -540,10 +547,11 @@
                 if (average > 60) { player.vy -= 1.2; if (player.vy < -player.jumpPower * 1.5) player.vy = -player.jumpPower * 1.5; spawnExhaust(player.x + 15, player.y + player.h); }
             }
 
+            // Đồng bộ mượt mà tuyệt đối chế độ 2 người chơi qua mạng
             if (opponentData) {
                 let targetOppScreenY = opponentData.worldY + cameraOffset;
-                oppRender.x += (opponentData.x - oppRender.x) * 0.7; 
-                oppRender.y += (targetOppScreenY - oppRender.y) * 0.7;
+                oppRender.x += (opponentData.x - oppRender.x) * 0.85; 
+                oppRender.y += (targetOppScreenY - oppRender.y) * 0.85;
                 oppRender.squash += (opponentData.squash - oppRender.squash) * 0.5; 
                 oppRender.angle += (opponentData.angle - oppRender.angle) * 0.5;
                 oppRender.vy = opponentData.vy; 
@@ -568,7 +576,7 @@
                     if (Math.abs(player.y - ty) < 15) { player.webTarget.visited = true; player.webTarget = null; player.vy = -player.jumpPower * 1.5; }
                 } else {
                     if (useGyro) player.targetX = player.x + ((gyroGamma / 45) * 15);
-                    player.x += (player.targetX - player.x) * (useGyro ? 0.8 : 0.4);
+                    player.x += (player.targetX - player.x) * (useGyro ? 0.85 : 0.5);
                     if (player.x > canvas.width) player.x = -player.w; if (player.x + player.w < 0) player.x = canvas.width;
                     player.vy += gravity; player.y += player.vy; player.squash += (1.0 - player.squash) * 0.15;
                     if (player.flipAngle > 0) { let spinSpeed = 0.25; player.angle += spinSpeed * player.flipDir; player.flipAngle -= spinSpeed; if (player.flipAngle <= 0) { player.angle = 0; player.flipAngle = 0; } }
@@ -595,10 +603,18 @@
                     }
                 }
             } else {
+                // Khi mình chết, bám theo camera của người còn sống
                 if (opponentData && !opponentData.isDead) { 
                     player.x = oppRender.x; 
                     player.y = oppRender.y; 
                 }
+            }
+
+            // Cập nhật hiệu ứng đuôi sáng neon (Trail)
+            for (let t = trailParticles.length - 1; t >= 0; t--) {
+                let tp = trailParticles[t];
+                tp.life -= 0.05;
+                if (tp.life <= 0) trailParticles.splice(t, 1);
             }
 
             for (let i = particles.length - 1; i >= 0; i--) { let pt = particles[i]; pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.04; if (pt.life <= 0) particles.splice(i, 1); }
@@ -621,7 +637,7 @@
                 }); 
             }
 
-            // Kiểm tra kết thúc trò chơi (Chế độ đơn: mình chết là xong. Chế độ đôi: cả hai cùng chết mới hiện thông báo)
+            // Điều kiện kết thúc trò chơi
             if (isSoloMode || !conn || !conn.open) {
                 if (player.isDead) { gameOver(); return; }
             } else {
@@ -672,10 +688,10 @@
                                         spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585');
                                     }
                                 } else {
-                                    // Chế độ đôi: Người chơi còn sống ăn tim sẽ hồi sinh người chết và trừ 20 điểm của người được cứu
+                                    // Chế độ đôi: Người còn sống ăn tim sẽ cứu đồng đội hồi sinh ngay tại chỗ
                                     if (opponentData && opponentData.isDead) { 
                                         conn.send({ type: 'revive' }); 
-                                        showToast("💖 BẠN ĐÃ CỨU SỐNG ĐỒNG ĐỘI (-20 ĐIỂM)! 💖", "#ff9f1c"); 
+                                        showToast("💖 ĐÃ CỨU SỐNG ĐỒNG ĐỘI TẠI CHỖ (-20 ĐIỂM)! 💖", "#ff9f1c"); 
                                     } else {
                                         showToast("💖 NHẶT ĐƯỢC TRÁI TIM MAY MẮN! 💖", "#f72585");
                                     }
@@ -707,7 +723,15 @@
                             }
 
                             if(!player.webTarget && !player.rocketFlying) {
-                                player.vy = -player.jumpPower; player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0; player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
+                                player.vy = -player.jumpPower; 
+                                player.squash = 0.4; 
+                                player.flipAngle = Math.PI * 2; 
+                                player.angle = 0; 
+                                player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
+                                
+                                // Tạo hiệu ứng đuôi sáng neon chuyển màu theo cấp độ hiện tại (colorStage)
+                                addTrail(player.x, player.y, getPlayerColor(player.colorStage));
+
                                 if (!p.visited) { 
                                     p.visited = true; 
                                     score += (useGyro ? 2 : 1); 
@@ -719,7 +743,7 @@
                 }
             }
 
-            // Camera cuốn theo người chơi còn sống
+            // Camera flow linh hoạt theo người còn sống
             let focusY = player.y; 
             if (player.isDead && opponentData && !opponentData.isDead) { 
                 focusY = oppRender.y; 
@@ -732,7 +756,6 @@
             draw(); gameLoopId = requestAnimationFrame(loop);
         }
 
-        // Người chơi thứ 2 hiển thị màu neon cam vàng (#ff9f1c) để phân biệt
         function drawEntity(entity, isOpponent = false) {
             if (entity.isDead) {
                 ctx.font = "30px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.shadowBlur = 15; ctx.shadowColor = '#fff'; ctx.fillText("💀", entity.x + 15, entity.y + 15); ctx.shadowBlur = 0; 
@@ -760,6 +783,19 @@
             ctx.fillStyle = '#0b0c10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             if (slowTime > 0) { ctx.fillStyle = "rgba(0, 200, 255, 0.08)"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
             if (micTimeRemaining > 0) { ctx.fillStyle = "rgba(255, 0, 85, 0.1)"; ctx.fillRect(0, 0, canvas.width, canvas.height); } 
+
+            // Vẽ hiệu ứng đuôi sáng neon (Trail) thăng tiến màu sắc
+            trailParticles.forEach(tp => {
+                ctx.save();
+                ctx.globalAlpha = tp.life * 0.7;
+                ctx.fillStyle = tp.color;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = tp.color;
+                ctx.beginPath();
+                ctx.arc(tp.x, tp.y, 9 * tp.life, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
 
             for (let p of platforms) {
                 if(p.y > canvas.height + 50 || p.y < -50 || p.broken) continue; 
