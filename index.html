@@ -76,7 +76,14 @@
         <button id="restart-btn" class="btn-orange" style="width: auto;">Cùng Chơi Lại</button>
         <button id="home-btn" class="btn-gray" style="width: auto;">Về Trang Chủ</button>
     </div>
-
+<!-- ===== CHÈN ĐOẠN KHUNG NHẬP TÊN MỚI VÀO ĐÂY ===== -->
+    <div id="name-prompt-modal" style="display: none;">
+        <h2>CHÀO MỪNG TỚI NEON JUMPER</h2>
+        <p>Vui lòng nhập biệt danh của bạn để bắt đầu!</p>
+        <input type="text" id="first-name-input" placeholder="NHẬP TÊN CỦA BẠN" maxlength="12">
+        <button id="save-name-btn" class="btn-green">BẮT ĐẦU CHƠI</button>
+    </div>
+    <!-- ================================================= -->
     <canvas id="gameCanvas"></canvas>
 
     <!-- Nhúng Script theo thứ tự logic -->
