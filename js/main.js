@@ -128,6 +128,31 @@ function gameOver() {
 // UI & Inputs Events
 document.getElementById('player-name-input').value = myName;
 document.getElementById('lobby-highscore').innerText = myHighScore;
+
+// --- XỬ LÝ KHUNG NHẬP TÊN LẦN ĐẦU ---
+const namePromptModal = document.getElementById('name-prompt-modal');
+const firstNameInput = document.getElementById('first-name-input');
+const saveNameBtn = document.getElementById('save-name-btn');
+
+if (!myName || myName === '') {
+    namePromptModal.style.display = 'flex';
+}
+
+saveNameBtn.onclick = () => {
+    let n = firstNameInput.value.trim();
+    if (n) {
+        myName = n;
+        localStorage.setItem('neonJumperName', myName);
+        document.getElementById('player-name-input').value = myName;
+        document.getElementById('my-ingame-name').innerText = myName;
+        namePromptModal.style.display = 'none';
+        showToast("✅ Đã lưu hồ sơ!", "#2ecc71");
+    } else {
+        showToast("⚠️ Vui lòng nhập tên!", "#ff9f1c");
+    }
+};
+// ------------------------------------
+
 document.getElementById('show-lb-btn').onclick = () => { document.getElementById('leaderboard-modal').style.display = 'block'; fetchLeaderboard(); };
 document.getElementById('close-lb-btn').onclick = () => { document.getElementById('leaderboard-modal').style.display = 'none'; };
 document.getElementById('home-btn').onclick = () => { window.location.reload(); };
