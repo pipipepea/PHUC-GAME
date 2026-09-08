@@ -407,7 +407,6 @@
         function spawnExplosion(x, y, color) { for(let i = 0; i < 25; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 1.0, color: color }); }
         function spawnExhaust(x, y) { particles.push({ x: x + (Math.random() * 20 - 10), y: y, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 5 + 2, life: 0.8, color: '#ffffff' }); }
         
-        // Thêm hạt đuôi sáng neon với màu sắc thăng tiến theo cấp độ
         function addTrail(x, y, color) {
             trailParticles.push({ x: x + 15, y: y + 15, life: 1.0, color: color });
         }
@@ -440,7 +439,8 @@
 
         function startGame(seed, solo = false) {
             isSoloMode = solo;
-            document.getElementById('ui-layer').style.display = 'block'; document.getElementById('top-right-controls').style.display = 'flex';
+            document.getElementById('ui-layer').style.display = 'block'; 
+            document.getElementById('top-right-controls').style.display = 'flex';
             
             if (isSoloMode || !conn || !conn.open) {
                 document.getElementById('opp-score-container').style.display = 'none';
@@ -536,6 +536,13 @@
             document.getElementById('score').innerText = score;
         }
 
+        function getPlayerColor(stage) { 
+            if (stage <= 0) return '#66fcf1'; 
+            if (stage === 1) return '#00ff00'; 
+            if (stage === 2) return '#fee440'; 
+            return `hsl(${Date.now() % 360}, 100%, 50%)`; 
+        }
+
         function loop() {
             if (isGameOver) return;
             if (slowTime > 0) slowTime--; if (micTimeRemaining > 0) micTimeRemaining--;
@@ -547,7 +554,6 @@
                 if (average > 60) { player.vy -= 1.2; if (player.vy < -player.jumpPower * 1.5) player.vy = -player.jumpPower * 1.5; spawnExhaust(player.x + 15, player.y + player.h); }
             }
 
-            // Đồng bộ mượt mà tuyệt đối chế độ 2 người chơi qua mạng
             if (opponentData) {
                 let targetOppScreenY = opponentData.worldY + cameraOffset;
                 oppRender.x += (opponentData.x - oppRender.x) * 0.85; 
@@ -603,14 +609,12 @@
                     }
                 }
             } else {
-                // Khi mình chết, bám theo camera của người còn sống
                 if (opponentData && !opponentData.isDead) { 
                     player.x = oppRender.x; 
                     player.y = oppRender.y; 
                 }
             }
 
-            // Cập nhật hiệu ứng đuôi sáng neon (Trail)
             for (let t = trailParticles.length - 1; t >= 0; t--) {
                 let tp = trailParticles[t];
                 tp.life -= 0.05;
@@ -637,7 +641,6 @@
                 }); 
             }
 
-            // Điều kiện kết thúc trò chơi
             if (isSoloMode || !conn || !conn.open) {
                 if (player.isDead) { gameOver(); return; }
             } else {
@@ -688,7 +691,6 @@
                                         spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585');
                                     }
                                 } else {
-                                    // Chế độ đôi: Người còn sống ăn tim sẽ cứu đồng đội hồi sinh ngay tại chỗ
                                     if (opponentData && opponentData.isDead) { 
                                         conn.send({ type: 'revive' }); 
                                         showToast("💖 ĐÃ CỨU SỐNG ĐỒNG ĐỘI TẠI CHỖ (-20 ĐIỂM)! 💖", "#ff9f1c"); 
@@ -729,7 +731,6 @@
                                 player.angle = 0; 
                                 player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
                                 
-                                // Tạo hiệu ứng đuôi sáng neon chuyển màu theo cấp độ hiện tại (colorStage)
                                 addTrail(player.x, player.y, getPlayerColor(player.colorStage));
 
                                 if (!p.visited) { 
@@ -743,7 +744,6 @@
                 }
             }
 
-            // Camera flow linh hoạt theo người còn sống
             let focusY = player.y; 
             if (player.isDead && opponentData && !opponentData.isDead) { 
                 focusY = oppRender.y; 
@@ -784,7 +784,6 @@
             if (slowTime > 0) { ctx.fillStyle = "rgba(0, 200, 255, 0.08)"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
             if (micTimeRemaining > 0) { ctx.fillStyle = "rgba(255, 0, 85, 0.1)"; ctx.fillRect(0, 0, canvas.width, canvas.height); } 
 
-            // Vẽ hiệu ứng đuôi sáng neon (Trail) thăng tiến màu sắc
             trailParticles.forEach(tp => {
                 ctx.save();
                 ctx.globalAlpha = tp.life * 0.7;
