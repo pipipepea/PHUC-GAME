@@ -55,7 +55,7 @@ function updatePhysics() {
 
             if (player.y > canvas.height) {
                 if (isSoloMode || !conn || !conn.open) {
-                    if (player.hearts > 1) { player.hearts--; document.getElementById('heart-count').innerText = player.hearts; player.y = canvas.height - 150; player.vy = -player.jumpPower * 1.5; spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); showToast(`💔 MẤT 1 MẠNG! CÒN ${player.hearts} MẠNG 💔`, "#f72585"); } 
+                    if (player.hearts > 1) { player.hearts--; document.getElementById('heart-count').innerText = player.hearts; player.y = canvas.height - 150; player.vy = -player.jumpPower * 1.5; spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); showToast(`💔 CÒN ${player.hearts} MẠNG 💔`, "#f72585"); } 
                     else { player.hearts = 0; document.getElementById('heart-count').innerText = 0; player.isDead = true; player.h = 30; player.colorStage = 0; player.jumpPower = baseJump; player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); }
                 } else { player.isDead = true; player.h = 30; player.colorStage = 0; player.jumpPower = baseJump; player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; spawnExplosion(player.x + 15, canvas.height - 20, '#f72585'); }
             }
@@ -83,22 +83,35 @@ function updatePhysics() {
             if (player.y + player.h >= p.y && player.y + player.h - player.vy <= p.y + p.h) {
                 if (player.x + player.w > p.x - 5 && player.x < p.x + p.w + 5) {
                     p.hp--; if (p.hp <= 0) { p.broken = true; spawnExplosion(p.x + p.w/2, p.y, p.dx !== 0 ? '#f72585' : '#45a29e'); }
-                    if (p.hasMic) { p.hasMic = false; player.micCount++; document.getElementById('mic-counter').innerText = `🎤: ${player.micCount}/3`; if (player.micCount >= 3) { player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; micTimeRemaining = 120; showToast("🎤 THỔI MẠNH ĐỂ BAY! 🎤", "#ff0055"); } }
-                    if (p.hasRocket) {
-                        p.hasRocket = false; player.rocketCount++; document.getElementById('rocket-count').innerText = player.rocketCount; spawnExplosion(p.x + p.w / 2, p.y - 15, '#ff5500');
-                        if (player.rocketCount >= 6) { player.rocketCount = 0; document.getElementById('rocket-count').innerText = 0; player.rocketFlying = true; player.rocketStepsLeft = 60; showToast("🚀 KÍCH HOẠT TÊN LỬA BAY VÚT LÊN! 🚀", "#ff5500"); } 
-                        else { showToast(`🚀 ĐÃ THU TÊN LỬA (${player.rocketCount}/6)! 🚀`, "#ff5500"); }
+                    
+                    if (p.hasMic) { 
+                        p.hasMic = false; player.micCount++; 
+                        document.getElementById('mic-counter').innerText = `🎤: ${player.micCount}/3`; 
+                        triggerUIEffect('mic-counter');
+                        if (player.micCount >= 3) { player.micCount = 0; document.getElementById('mic-counter').innerText = `🎤: 0/3`; micTimeRemaining = 120; showToast("🎤 THỔI MẠNH ĐỂ BAY! 🎤", "#ff0055"); } 
                     }
-                    if (p.hasSword) { p.hasSword = false; player.berserkTimer = 300; spawnExplosion(p.x + p.w / 2, p.y - 15, '#e74c3c'); showToast("⚔️ ĐÃ VÀO CHẾ ĐỘ CUỒNG SÁT! ĐUÔI SÁNG SÁT THƯƠNG! ⚔️", "#e74c3c"); }
+                    if (p.hasRocket) {
+                        p.hasRocket = false; player.rocketCount++; document.getElementById('rocket-count').innerText = player.rocketCount; 
+                        spawnExplosion(p.x + p.w / 2, p.y - 15, '#ff5500');
+                        triggerUIEffect('rocket-counter');
+                        if (player.rocketCount >= 6) { player.rocketCount = 0; document.getElementById('rocket-count').innerText = 0; player.rocketFlying = true; player.rocketStepsLeft = 60; showToast("🚀 TÊN LỬA KHỞI ĐỘNG! 🚀", "#ff5500"); } 
+                        else { showToast(`🚀 THU TÊN LỬA (${player.rocketCount}/6)`, "#ff5500"); }
+                    }
+                    if (p.hasSword) { 
+                        p.hasSword = false; player.berserkTimer = 300; spawnExplosion(p.x + p.w / 2, p.y - 15, '#e74c3c'); 
+                        triggerUIEffect('sword-counter');
+                        showToast("⚔️ CHẾ ĐỘ CUỒNG SÁT! ⚔️", "#e74c3c"); 
+                    }
                     if (p.hasRevive) { 
                         p.hasRevive = false; 
+                        triggerUIEffect('heart-display');
                         if (isSoloMode || !conn || !conn.open) {
-                            if (player.hearts < 4) { player.heartAccumulator++; if (player.heartAccumulator >= 2) { player.heartAccumulator = 0; player.hearts++; document.getElementById('heart-count').innerText = player.hearts; showToast(`💖 NHẬN THÊM 1 MẠNG! (${player.hearts}/4) 💖`, "#f72585"); } else { showToast(`💖 THU THẬP TRÁI TIM (1/2) 💖`, "#f72585"); } spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585'); }
-                        } else { if (opponentData && opponentData.isDead) { conn.send({ type: 'revive' }); showToast("💖 ĐÃ CỨU SỐNG ĐỒNG ĐỘI TẠI CHỖ (-20 ĐIỂM)! 💖", "#ff9f1c"); } else { showToast("💖 NHẶT ĐƯỢC TRÁI TIM MAY MẮN! 💖", "#f72585"); } spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585'); }
+                            if (player.hearts < 4) { player.heartAccumulator++; if (player.heartAccumulator >= 2) { player.heartAccumulator = 0; player.hearts++; document.getElementById('heart-count').innerText = player.hearts; showToast(`💖 +1 MẠNG!`, "#f72585"); } else { showToast(`💖 MẢNH TIM (1/2)`, "#f72585"); } spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585'); }
+                        } else { if (opponentData && opponentData.isDead) { conn.send({ type: 'revive' }); showToast("💖 ĐÃ CỨU ĐỒNG ĐỘI!", "#ff9f1c"); } else { showToast("💖 NHẶT ĐƯỢC TIM!", "#f72585"); } spawnExplosion(p.x + p.w / 2, p.y - 15, '#f72585'); }
                     }
-                    if (p.hasShrink) { p.hasShrink = false; spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff'); player.h = Math.max(15, player.h - 5); player.jumpPower += 1.5; showToast("⚡ THU NHỎ & TĂNG SỨC NHẢY! ⚡", "#00f0ff"); }
-                    if (p.hasSnow) { p.hasSnow = false; slowTime = 300; showToast("❄️ ĐÓNG BĂNG THỜI GIAN! ❄️", "#80d0ff"); if(conn && conn.open) conn.send({type: 'slow'}); }
-                    if (p.hasWeb) { p.hasWeb = false; let targetIdx = Math.min(i + 8, platforms.length - 1); player.webTarget = platforms[targetIdx]; showToast("🕸️ NGƯỜI NHỆN! 🕸️", "#fff"); for(let j = i; j <= targetIdx; j++) { if(!platforms[j].visited) { platforms[j].visited = true; score += (useGyro ? 2 : 1); } } checkEvol(); }
+                    if (p.hasShrink) { p.hasShrink = false; spawnExplosion(p.x + p.w / 2, p.y - 15, '#00f0ff'); player.h = Math.max(15, player.h - 5); player.jumpPower += 1.5; showToast("⚡ THU NHỎ & TĂNG NHẢY!", "#00f0ff"); }
+                    if (p.hasSnow) { p.hasSnow = false; slowTime = 300; showToast("❄️ ĐÓNG BĂNG!", "#80d0ff"); if(conn && conn.open) conn.send({type: 'slow'}); }
+                    if (p.hasWeb) { p.hasWeb = false; let targetIdx = Math.min(i + 8, platforms.length - 1); player.webTarget = platforms[targetIdx]; showToast("🕸️ NGƯỜI NHỆN!", "#fff"); for(let j = i; j <= targetIdx; j++) { if(!platforms[j].visited) { platforms[j].visited = true; score += (useGyro ? 2 : 1); } } checkEvol(); }
 
                     if(!player.webTarget && !player.rocketFlying) {
                         player.vy = -player.jumpPower; player.squash = 0.4; player.flipAngle = Math.PI * 2; player.angle = 0; player.flipDir = (useGyro) ? ((gyroGamma > 0) ? 1 : -1) : ((player.targetX > player.x) ? 1 : -1);
