@@ -1,5 +1,4 @@
 // Danh sách các emoji khuôn mặt biểu cảm ngẫu nhiên
-const FACE_EMOJIS = ["😀", "😎", "🤩", "🤪", "🥶", "😡", "🧐", "🤠", "😈", "🥳", "🤖", "👽"];
 
 function updatePhysics() {
     if (slowTime > 0) slowTime--; 
