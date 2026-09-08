@@ -34,3 +34,5 @@ let networkTimer = 0;
 const FIXED_DT = 1000 / 60;
 const MAX_PARTICLES = 180;
 let isSoloMode = false;
+// Danh sách các emoji khuôn mặt biểu cảm
+const FACE_EMOJIS = ["😀", "😎", "🤩", "🤪", "🥶", "😡", "🧐", "🤠", "😈", "🥳", "🤖", "🔞", "☢"];
