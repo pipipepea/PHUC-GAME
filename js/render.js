@@ -9,20 +9,27 @@ function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, c
     if (!isFriend) { if (hOffset < -18) hOffset = -18; if (hOffset > 10) hOffset = 10; }
     ctx.fillStyle = '#45a29e'; ctx.fillRect(-w / 2 - 12, hOffset - 6, 8, 12); ctx.fillRect(w / 2 + 4, hOffset - 6, 8, 12);
 
-    // --- VẼ EMOJI: NẰM CHÍNH GIỮA Ô ĐEN VÀ TO HƠN 1.2 LẦN (17px) ---
+    // --- TẠO PHẦN CỔ NỐI & VAI GIẢ LẬP ---
+    // Vẽ một hình chữ nhật nhỏ màu neon làm cổ/vai nhô lên từ đỉnh thân nhân vật
+    ctx.fillStyle = colorStr;
+    ctx.fillRect(-6, -h / 2 - 8, 12, 10); // Khối cổ nối liền thân với đầu
+    // -------------------------------------
+
+    // --- VẼ EMOJI: NẰM GỌN GÀNG TRÊN PHẦN CỔ ---
     ctx.save();
     ctx.font = "17px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.shadowBlur = 0; 
-    let emojiY = -h / 2 + 9; 
+    
+    // Đặt tọa độ Y của emoji dịch lên trên đoạn cổ một chút
+    let emojiY = -h / 2 - 3; 
     ctx.fillText(currentEmoji || "😎", 0, emojiY);
     ctx.restore();
-    // -------------------------------------------------------------
+    // ---------------------------------------------
 
     ctx.restore();
 }
-
 function getPlayerColor(stage) { 
     if (stage <= 0) return '#66fcf1'; 
     if (stage === 1) return '#00ff00'; 
