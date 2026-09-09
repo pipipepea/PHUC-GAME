@@ -1,3 +1,29 @@
+// Khai báo an toàn chống trùng lặp biến toàn cục cho sảnh chờ
+if (typeof lobbyPlayer === 'undefined') {
+    var lobbyPlayer = {
+        x: 100,
+        y: 100,
+        w: 30,
+        h: 60,
+        vy: 0,
+        gravity: 0.6,
+        jumpPower: 10,
+        angle: 0,
+        dir: 1,
+        baseY: 200
+    };
+}
+
+if (typeof lobbyFriend === 'undefined') {
+    var lobbyFriend = {
+        x: 0,
+        y: 0,
+        w: 30,
+        h: 60,
+        angle: 0
+    };
+}
+
 function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, currentEmoji = "😎") {
     ctx.save(); 
     ctx.translate(x, y); 
@@ -84,6 +110,7 @@ function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, c
 
     ctx.restore();
 }
+
 function getPlayerColor(stage) { 
     if (stage <= 0) return '#66fcf1'; 
     if (stage === 1) return '#00ff00'; 
@@ -145,12 +172,31 @@ function draw() {
         drawTrailFor(adjustedOppTrail, opponentData.colorStage, opponentData.berserkTimer, true);
     }
 
+    // --- HIỆU ỨNG KHỐI (PLATFORMS) NEON MỜ DẦN THEO LƯỢNG HP ---
     for (let p of platforms) {
         if(p.y > canvas.height + 50 || p.y < -50 || p.broken) continue; 
-        if (!p.visited) { ctx.fillStyle = p.dx !== 0 ? '#f72585' : '#45a29e'; ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle; } else { ctx.fillStyle = '#1f2833'; ctx.shadowBlur = 0; }
+        
+        let maxHp = p.dx !== 0 ? 3 : 6; 
+        let healthRatio = Math.max(0.2, p.hp / maxHp); 
+        let baseColor = p.dx !== 0 ? '#f72585' : '#45a29e';
+        
+        if (!p.visited) { 
+            ctx.fillStyle = baseColor; 
+            ctx.shadowBlur = 20 * healthRatio; 
+            ctx.shadowColor = baseColor; 
+        } else { 
+            ctx.fillStyle = '#1f2833'; 
+            ctx.shadowBlur = 0; 
+        }
          
-        ctx.globalAlpha = p.dx === 0 ? (p.hp / 6) * 0.5 + 0.5 : (p.hp / 3) * 0.5 + 0.5; ctx.fillRect(p.x, p.y, p.w, p.h); ctx.globalAlpha = 1.0;
-        let bounce = Math.sin(Date.now() / 200) * 5; ctx.font = "bold 10px 'Orbitron', Courier New"; ctx.fillStyle = "#0b0c10"; ctx.fillText(p.hp, p.x + p.w / 2, p.y + 10);
+        ctx.globalAlpha = healthRatio; 
+        ctx.fillRect(p.x, p.y, p.w, p.h); 
+        ctx.globalAlpha = 1.0;
+        
+        let bounce = Math.sin(Date.now() / 200) * 5; 
+        ctx.font = "bold 10px 'Orbitron', Courier New"; 
+        ctx.fillStyle = "#0b0c10"; 
+        ctx.fillText(p.hp, p.x + p.w / 2, p.y + 10);
          
         ctx.font = "24px Arial";
         if (p.hasMic) { ctx.shadowBlur = 15; ctx.shadowColor = '#ff0055'; ctx.fillText("🎤", p.x + p.w / 2, p.y - 15 + bounce); }
@@ -173,34 +219,12 @@ function draw() {
     particles.forEach(pt => { ctx.globalAlpha = pt.life; ctx.fillStyle = pt.color; ctx.shadowBlur = 15; ctx.shadowColor = pt.color; ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); ctx.fill(); });
     ctx.globalAlpha = 1.0; ctx.shadowBlur = 0; drawRadar(); 
 }
-// --- KHỞI TẠO ĐỐI TƯỢNG SẢNH CHỜ (LOBBY OBJECTS) ---
-let lobbyPlayer = {
-    x: 100,
-    y: 100,
-    w: 30,
-    h: 60,
-    vy: 0,
-    gravity: 0.6,
-    jumpPower: 10,
-    angle: 0,
-    dir: 1,
-    baseY: 200
-};
-
-let lobbyFriend = {
-    x: 0,
-    y: 0,
-    w: 30,
-    h: 60,
-    angle: 0
-};
 
 function lobbyLoop() {
     if (!isLobby) return;
     ctx.fillStyle = 'rgba(11, 12, 16, 0.4)'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
      
-    // Khai báo giá trị mặc định phòng khi profileBox chưa sẵn sàng
     let leftCornerX = 50; 
     let leftSideY = lobbyPlayer.baseY || 100;
     let leftSideAngle = 0;
@@ -209,15 +233,12 @@ function lobbyLoop() {
     if (profileBox) { 
         const rect = profileBox.getBoundingClientRect(); 
          
-        // 1. Tọa độ nhân vật màu cam ở góc phải
         lobbyFriend.x = rect.right - 28; 
         lobbyFriend.y = rect.top - 20; 
 
-        // --- TÍNH TOÁN TỌA ĐỘ ĐỐI XỨNG HOÀN HẢO CHO GÓC TRÁI ---
         let offsetRight = rect.right - lobbyFriend.x; 
         leftCornerX = rect.left + offsetRight; 
         let leftCornerY = rect.top - 20;
-        // -------------------------------------------------------
          
         lobbyPlayer.baseY = rect.top - 20; 
          
@@ -245,13 +266,8 @@ function lobbyLoop() {
     lobbyFriend.angle = Math.sin(Date.now() / 300) * 0.1;
 
     // --- VẼ CÁC NHÂN VẬT Ở SẢNH CHỜ ---
-    // 1. Nhân vật nhảy múa chính giữa
     drawEntityRaw(ctx, lobbyPlayer.x, lobbyPlayer.y, lobbyPlayer.w, lobbyPlayer.h, lobbyPlayer.angle, lobbyPlayer.vy, '#66fcf1', false, "😎");
-    
-    // 2. Nhân vật góc phải (Đồng đội - màu cam)
     drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.h ? lobbyFriend.w : 30, lobbyFriend.h || 30, lobbyFriend.angle, 0, '#ff9f1c', true, "🤖");
-
-    // 3. Nhân vật góc trái
     drawEntityRaw(ctx, leftCornerX, leftSideY, 30, 60, leftSideAngle, 0, '#00f0ff', true, "🤩");
      
     lobbyAnimId = requestAnimationFrame(lobbyLoop);
