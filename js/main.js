@@ -75,8 +75,9 @@ function triggerPlayerRevive(p) {
 
     if (bestPlatform) {
         p.webTarget = bestPlatform;
+        showToast("🕸️ TƠ TỰ ĐỘNG CỨU NGUY! 🕸️", "#00f0ff");
         if (typeof spawnExplosion === 'function') {
-            spawnExplosion(p.x + 15, p.y + 15, '#ffffff');
+            spawnExplosion(p.x + 15, p.y + 15, '#00f0ff');
         }
     }
 }
@@ -136,11 +137,51 @@ function loop(currentTime) {
     if (frameTime > 250) frameTime = 250; 
     accumulator += frameTime;
     
-    while (accumulator >= FIXED_DT) { updatePhysics(); accumulator -= FIXED_DT; }
+    while (accumulator >= FIXED_DT) { 
+        updatePhysics(); 
+        
+        // --- XỬ LÝ LỰC KÉO TƠ VẬT LÝ TRONG MỖI BƯỚC FIXED_DT ---
+        if (player.webTarget) {
+            let targetX = player.webTarget.x + player.webTarget.w / 2;
+            let targetY = player.webTarget.y + player.webTarget.h / 2;
+            let dx = targetX - (player.x + player.w / 2);
+            let dy = targetY - (player.y + player.h / 2);
+            let dist = Math.hypot(dx, dy);
+            
+            if (dist > 25 && !player.webTarget.broken) {
+                player.vx = (dx / dist) * 14;
+                player.vy = (dy / dist) * 14;
+            } else {
+                player.vy = -14; // Hất vọt lên sau khi dính tơ cứu nguy
+                player.webTarget = null;
+            }
+        }
+        
+        accumulator -= FIXED_DT; 
+    }
+    
     if (isSoloMode || !conn || !conn.open) { if (player.isDead) { gameOver(); return; } } 
     else { if (player.isDead && opponentData && opponentData.isDead) { gameOver(); return; } }
     
-    draw(); gameLoopId = requestAnimationFrame(loop);
+    draw(); 
+    
+    // --- VẼ HIỆU ỨNG TIA TƠ NỐI TỪ NHÂN VẬT ĐẾN KHỐI MỤC TIÊU ---
+    if (player.webTarget && !player.webTarget.broken) {
+        let targetX = player.webTarget.x + player.webTarget.w / 2;
+        let targetY = player.webTarget.y + player.webTarget.h / 2;
+        ctx.save();
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00f0ff';
+        ctx.beginPath();
+        ctx.moveTo(player.x + player.w / 2, player.y + player.h / 2);
+        ctx.lineTo(targetX, targetY);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    gameLoopId = requestAnimationFrame(loop);
 }
 
 function gameOver() {
