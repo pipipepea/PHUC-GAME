@@ -250,5 +250,3 @@ function handleMovement(xClient) {
 canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
 canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMovement(e.touches[0].clientX); }, {passive: false});
 canvas.addEventListener('mousemove', (e) => handleMovement(e.clientX));
-
-lobbyLoop();
