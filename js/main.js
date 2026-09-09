@@ -54,29 +54,6 @@ function checkEvol() {
     document.getElementById('score').innerText = score;
 }
 
-function triggerPlayerRevive(p) {
-    p.isDead = false;
-    p.vy = -12; // Hất nhẹ nhân vật lên cao
-    
-    // Tự động tìm khối gần nhất phía trên để bắn tơ cứu nguy
-    let bestPlatform = null;
-    let minDst = Infinity;
-
-    for (let plat of platforms) {
-        if (!plat.broken && plat.y < p.y) {
-            let dst = Math.hypot((plat.x + plat.w/2) - (p.x + 15), plat.y - p.y);
-            if (dst < minDst) {
-                minDst = dst;
-                bestPlatform = plat;
-            }
-        }
-    }
-
-    if (bestPlatform) {
-        p.webTarget = bestPlatform;
-    }
-}
-
 function startCountdown(seed, solo = false) {
     isLobby = false; cancelAnimationFrame(lobbyAnimId);
     document.getElementById('mp-lobby').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
@@ -113,7 +90,7 @@ function initGame(seed) {
         let isMoving = rng() < 0.35 && i > 2; let speed = isMoving ? (rng() > 0.5 ? 2.5 : -2.5) : 0; let hp = isMoving ? 3 : 6; 
         let hasHeart = (rng() < 0.08) && i > 10; let hasShrink = (rng() < 0.08) && !hasHeart && i > 5; let hasSnow = (rng() < 0.05) && !hasHeart && !hasShrink && i > 15; let hasWeb = (rng() < 0.05[...]
         let previous = platforms[platforms.length - 1]; let maxHorizontal = Math.max(45, Math.min(canvas.width - PLATFORM_W, simJump * 7)); let minX = Math.max(0, previous.x - maxHorizontal); let [...]
-        platforms.push({ x: p1X, y: currentY, w: PLATFORM_W, h: PLATFORM_H, hp: hp, broken: false, visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink, hasSnow: hasSnow, hasWeb: h[...]
+        platforms.push({ x: p1X, y: currentY, w: PLATFORM_W, h: PLATFORM_H, hp: hp, broken: false, visited: false, dx: speed, hasRevive: hasHeart, hasShrink: hasShrink, hasSnow: hasSnow, hasWeb: [...]
         if (rng() < 0.7) { let p2X = (p1X + canvas.width / 2) % (canvas.width - PLATFORM_W); let p2Y = currentY + (rng() * 40 - 20); platforms.push({ x: p2X, y: p2Y, w: PLATFORM_W, h: PLATFORM_H, [...]
         simScore++; if(Math.floor(simScore / 20) > Math.floor((simScore-1)/20)) { simJump -= 0.35; if(simJump < MIN_JUMP) simJump = MIN_JUMP; }
     }
