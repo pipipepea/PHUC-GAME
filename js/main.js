@@ -140,7 +140,7 @@ function loop(currentTime) {
     while (accumulator >= FIXED_DT) { 
         updatePhysics(); 
         
-        // --- XỬ LÝ LỰC KÉO TƠ VẬT LÝ TRONG MỖI BƯỚC FIXED_DT ---
+        // --- XỬ LÝ LỰC KÉO TƠ VẬT LÝ ---
         if (player.webTarget) {
             let targetX = player.webTarget.x + player.webTarget.w / 2;
             let targetY = player.webTarget.y + player.webTarget.h / 2;
@@ -152,12 +152,12 @@ function loop(currentTime) {
                 player.vx = (dx / dist) * 14;
                 player.vy = (dy / dist) * 14;
             } else {
-                player.vy = -14; // Hất vọt lên sau khi dính tơ cứu nguy
+                player.vy = -14; 
                 player.webTarget = null;
             }
         }
         
-        accumulator -= FIXED_DT; 
+        accumulator -= FIXED_DT; // Đặt đúng chuẩn ở đây để kết thúc bước lặp physics
     }
     
     if (isSoloMode || !conn || !conn.open) { if (player.isDead) { gameOver(); return; } } 
