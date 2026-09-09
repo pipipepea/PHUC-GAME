@@ -1,32 +1,30 @@
 function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, currentEmoji = "😎") {
     ctx.save(); ctx.translate(x, y); ctx.rotate(angle); 
+    
+    // 1. Thân chính nhân vật
     ctx.fillStyle = colorStr; ctx.shadowBlur = 20; ctx.shadowColor = colorStr; ctx.fillRect(-w / 2, -h / 2, w, h);
     
-    // Khung chữ nhật màu đen của nhân vật
+    // 2. Ô kính visor màu đen
     ctx.fillStyle = '#0b0c10'; ctx.shadowBlur = 0; ctx.fillRect(-w / 2 + 6, -h / 2 + 6, w - 12, 6);
     
+    // 3. Giáp vai / tay hai bên
     let hOffset = isFriend ? Math.sin(Date.now() / 150) * 8 - 5 : -vy * 1.5;
     if (!isFriend) { if (hOffset < -18) hOffset = -18; if (hOffset > 10) hOffset = 10; }
     ctx.fillStyle = '#45a29e'; ctx.fillRect(-w / 2 - 12, hOffset - 6, 8, 12); ctx.fillRect(w / 2 + 4, hOffset - 6, 8, 12);
 
-    // --- TẠO PHẦN CỔ NỐI & VAI GIẢ LẬP ---
-    // Vẽ một hình chữ nhật nhỏ màu neon làm cổ/vai nhô lên từ đỉnh thân nhân vật
+    // 4. Khối cổ nối liền thân với đầu (Tùy chỉnh)
     ctx.fillStyle = colorStr;
-    ctx.fillRect(-6, -h / 2 - 8, 12, 10); // Khối cổ nối liền thân với đầu
-    // -------------------------------------
+    ctx.fillRect(-10, -h / 2 + (-4), 20, 16);
 
-    // --- VẼ EMOJI: NẰM GỌN GÀNG TRÊN PHẦN CỔ ---
+    // 5. Khuôn mặt Emoji
     ctx.save();
-    ctx.font = "17px Arial";
+    ctx.font = "30px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.shadowBlur = 0; 
-    
-    // Đặt tọa độ Y của emoji dịch lên trên đoạn cổ một chút
-    let emojiY = -h / 2 - 3; 
+    let emojiY = -h / 2 + (4); 
     ctx.fillText(currentEmoji || "😎", 0, emojiY);
     ctx.restore();
-    // ---------------------------------------------
 
     ctx.restore();
 }
