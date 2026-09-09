@@ -127,8 +127,15 @@ function lobbyLoop() {
     if (profileBox) { 
         const rect = profileBox.getBoundingClientRect(); 
          
+        // Nhân vật cam ở góc phải (như cũ)
         lobbyFriend.x = rect.right - 28; 
         lobbyFriend.y = rect.top - 20; 
+
+        // --- THÊM TỌA ĐỘ CHO NHÂN VẬT ĐỨNG GÓC TRÁI ---
+        // Đặt neo ở mép trái của khung hộp hồ sơ hoặc mép trái màn hình
+        let leftCornerX = rect.left - 20; 
+        let leftCornerY = rect.top - 20;
+        // ---------------------------------------------
          
         lobbyPlayer.baseY = rect.top - 20; 
          
@@ -151,9 +158,20 @@ function lobbyLoop() {
     }
      
     lobbyFriend.angle = Math.sin(Date.now() / 300) * 0.1;
-     
+
+    // --- VẼ CÁC NHÂN VẬT Ở SẢNH CHỜ ---
+    // 1. Nhân vật nhảy múa ở giữa/lưng chừng sảnh
     drawEntityRaw(ctx, lobbyPlayer.x, lobbyPlayer.y, lobbyPlayer.w, lobbyPlayer.h, lobbyPlayer.angle, lobbyPlayer.vy, '#66fcf1', false, "😎");
+    
+    // 2. Nhân vật đứng/nhún nhảy ở góc phải (Đồng đội)
     drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.h ? lobbyFriend.w : 30, lobbyFriend.h || 30, lobbyFriend.angle, 0, '#ff9f1c', true, "🤖");
+
+    // 3. THÊM MỘT NHÂN VẬT ĐỨNG TĨNH HOẶC NHÚN NHÈO Ở GÓC TRÁI
+    let leftX = 50; // Tọa độ X cố định ở góc trái màn hình (hoặc theo rect.left)
+    let leftY = lobbyPlayer.baseY + Math.sin(Date.now() / 200) * 6; // Hiệu ứng nhún lên xuống nhẹ nhàng
+    let leftAngle = Math.sin(Date.now() / 400) * 0.05;
+    drawEntityRaw(ctx, leftX, leftY, 30, 60, leftAngle, 0, '#00f0ff', true, "🤩");
+    // -----------------------------------------------------------------
      
     lobbyAnimId = requestAnimationFrame(lobbyLoop);
 }
