@@ -173,6 +173,27 @@ function draw() {
     particles.forEach(pt => { ctx.globalAlpha = pt.life; ctx.fillStyle = pt.color; ctx.shadowBlur = 15; ctx.shadowColor = pt.color; ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); ctx.fill(); });
     ctx.globalAlpha = 1.0; ctx.shadowBlur = 0; drawRadar(); 
 }
+// --- KHỞI TẠO ĐỐI TƯỢNG SẢNH CHỜ (LOBBY OBJECTS) ---
+let lobbyPlayer = {
+    x: 100,
+    y: 100,
+    w: 30,
+    h: 60,
+    vy: 0,
+    gravity: 0.6,
+    jumpPower: 10,
+    angle: 0,
+    dir: 1,
+    baseY: 200
+};
+
+let lobbyFriend = {
+    x: 0,
+    y: 0,
+    w: 30,
+    h: 60,
+    angle: 0
+};
 
 function lobbyLoop() {
     if (!isLobby) return;
