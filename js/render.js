@@ -1,39 +1,11 @@
-// Khai báo an toàn chống trùng lặp biến toàn cục cho sảnh chờ
-if (typeof lobbyPlayer === 'undefined') {
-    var lobbyPlayer = {
-        x: 100,
-        y: 100,
-        w: 30,
-        h: 60,
-        vy: 0,
-        gravity: 0.6,
-        jumpPower: 10,
-        angle: 0,
-        dir: 1,
-        baseY: 200
-    };
-}
-
-if (typeof lobbyFriend === 'undefined') {
-    var lobbyFriend = {
-        x: 0,
-        y: 0,
-        w: 30,
-        h: 60,
-        angle: 0
-    };
-}
-
 function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, currentEmoji = "😎") {
     ctx.save(); 
     ctx.translate(x, y); 
     ctx.rotate(angle); 
 
-    // Hiệu ứng phát sáng tổng thể
     ctx.shadowBlur = 25;
     ctx.shadowColor = colorStr;
 
-    // 1. Thân giáp chính vát góc hiện đại
     ctx.fillStyle = '#1f2833';
     ctx.strokeStyle = colorStr;
     ctx.lineWidth = 2;
@@ -49,7 +21,6 @@ function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, c
     ctx.fill();
     ctx.stroke();
 
-    // 2. Lò phản ứng năng lượng trước ngực
     let corePulse = (Math.sin(Date.now() / 200) + 1) / 2;
     ctx.shadowBlur = 10 * corePulse;
     ctx.shadowColor = '#ff007f';
@@ -63,7 +34,6 @@ function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, c
     ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. Đường viền bo mạch chiến thuật trên thân
     ctx.shadowBlur = 0;
     ctx.strokeStyle = '#45a29e';
     ctx.lineWidth = 1.5;
@@ -72,7 +42,6 @@ function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, c
     ctx.moveTo(-12, -2); ctx.lineTo(12, -2);
     ctx.stroke();
 
-    // 4. Tay & Giáp vai so le (Alternating Cyber Arms)
     let timeVal = Date.now() / 150;
     let leftArmY = isFriend ? Math.sin(timeVal) * 6 : Math.min(10, Math.max(-10, -vy * 1.2)) + Math.sin(timeVal) * 4;
     let rightArmY = isFriend ? Math.sin(timeVal + Math.PI) * 6 : Math.min(10, Math.max(-10, -vy * 1.2)) + Math.sin(timeVal + Math.PI) * 4;
@@ -80,25 +49,21 @@ function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, c
     ctx.shadowBlur = 15;
     ctx.shadowColor = '#ff007f';
     
-    // Tay trái
     ctx.fillStyle = '#ff007f';
     ctx.fillRect(-w/2 - 10, leftArmY - 6, 8, 14);
     ctx.fillStyle = colorStr;
     ctx.fillRect(-w/2 - 8, leftArmY + 8, 4, 6);
 
-    // Tay phải
     ctx.fillStyle = '#ff007f';
     ctx.fillRect(w/2 + 2, rightArmY - 6, 8, 14);
     ctx.fillStyle = colorStr;
     ctx.fillRect(w/2 + 4, rightArmY + 8, 4, 6);
 
-    // 5. Vòng cổ / Khung đỡ cổ công nghệ
     ctx.shadowBlur = 12;
     ctx.shadowColor = colorStr;
     ctx.fillStyle = colorStr;
     ctx.fillRect(-8, -h/2 - 6, 16, 6);
 
-    // 6. Đầu Emoji phía trên
     ctx.save();
     ctx.shadowBlur = 20;
     ctx.shadowColor = '#ffff00';
@@ -172,7 +137,6 @@ function draw() {
         drawTrailFor(adjustedOppTrail, opponentData.colorStage, opponentData.berserkTimer, true);
     }
 
-    // --- HIỆU ỨNG KHỐI (PLATFORMS) NEON MỜ DẦN THEO LƯỢNG HP ---
     for (let p of platforms) {
         if(p.y > canvas.height + 50 || p.y < -50 || p.broken) continue; 
         
@@ -265,7 +229,6 @@ function lobbyLoop() {
      
     lobbyFriend.angle = Math.sin(Date.now() / 300) * 0.1;
 
-    // --- VẼ CÁC NHÂN VẬT Ở SẢNH CHỜ ---
     drawEntityRaw(ctx, lobbyPlayer.x, lobbyPlayer.y, lobbyPlayer.w, lobbyPlayer.h, lobbyPlayer.angle, lobbyPlayer.vy, '#66fcf1', false, "😎");
     drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.h ? lobbyFriend.w : 30, lobbyFriend.h || 30, lobbyFriend.angle, 0, '#ff9f1c', true, "🤖");
     drawEntityRaw(ctx, leftCornerX, leftSideY, 30, 60, leftSideAngle, 0, '#00f0ff', true, "🤩");
