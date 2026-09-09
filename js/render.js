@@ -200,6 +200,11 @@ function lobbyLoop() {
     ctx.fillStyle = 'rgba(11, 12, 16, 0.4)'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
      
+    // Khai báo giá trị mặc định phòng khi profileBox chưa sẵn sàng
+    let leftCornerX = 50; 
+    let leftSideY = lobbyPlayer.baseY || 100;
+    let leftSideAngle = 0;
+
     const profileBox = document.getElementById('profile-box');
     if (profileBox) { 
         const rect = profileBox.getBoundingClientRect(); 
@@ -209,9 +214,8 @@ function lobbyLoop() {
         lobbyFriend.y = rect.top - 20; 
 
         // --- TÍNH TOÁN TỌA ĐỘ ĐỐI XỨNG HOÀN HẢO CHO GÓC TRÁI ---
-        // Tính khoảng cách từ mép phải hộp đến nhân vật phải, sau đó áp dụng ngược lại cho bên trái
         let offsetRight = rect.right - lobbyFriend.x; 
-        let leftCornerX = rect.left + offsetRight; 
+        leftCornerX = rect.left + offsetRight; 
         let leftCornerY = rect.top - 20;
         // -------------------------------------------------------
          
@@ -222,6 +226,9 @@ function lobbyLoop() {
          
         if (lobbyPlayer.x > rightBound) lobbyPlayer.dir = -1;
         if (lobbyPlayer.x < leftBound) lobbyPlayer.dir = 1;
+
+        leftSideY = lobbyPlayer.baseY + Math.sin((Date.now() + 500) / 200) * 6;
+        leftSideAngle = Math.sin(Date.now() / 400) * 0.05;
     }
 
     lobbyPlayer.vy += lobbyPlayer.gravity; 
@@ -244,9 +251,7 @@ function lobbyLoop() {
     // 2. Nhân vật góc phải (Đồng đội - màu cam)
     drawEntityRaw(ctx, lobbyFriend.x, lobbyFriend.y, lobbyFriend.h ? lobbyFriend.w : 30, lobbyFriend.h || 30, lobbyFriend.angle, 0, '#ff9f1c', true, "🤖");
 
-    // 3. Nhân vật góc trái (Đối xứng chuẩn từng pixel với nhân vật góc phải)
-    let leftSideY = lobbyPlayer.baseY + Math.sin((Date.now() + 500) / 200) * 6; // Lệch pha nhún nhảy một chút cho sinh động
-    let leftSideAngle = Math.sin(Date.now() / 400) * 0.05;
+    // 3. Nhân vật góc trái
     drawEntityRaw(ctx, leftCornerX, leftSideY, 30, 60, leftSideAngle, 0, '#00f0ff', true, "🤩");
      
     lobbyAnimId = requestAnimationFrame(lobbyLoop);
