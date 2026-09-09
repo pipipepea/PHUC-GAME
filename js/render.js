@@ -1,29 +1,85 @@
 function drawEntityRaw(ctx, x, y, w, h, angle, vy, colorStr, isFriend = false, currentEmoji = "😎") {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(angle); 
-    
-    // 1. Thân chính nhân vật
-    ctx.fillStyle = colorStr; ctx.shadowBlur = 20; ctx.shadowColor = colorStr; ctx.fillRect(-w / 2, -h / 2, w, h);
-    
-    // 2. Ô kính visor màu đen
-    ctx.fillStyle = '#0b0c10'; ctx.shadowBlur = 0; ctx.fillRect(-w / 2 + 6, -h / 2 + 6, w - 12, 6);
-    
-    // 3. Giáp vai / tay hai bên
-    let hOffset = isFriend ? Math.sin(Date.now() / 150) * 8 - 5 : -vy * 1.5;
-    if (!isFriend) { if (hOffset < -18) hOffset = -18; if (hOffset > 10) hOffset = 10; }
-    ctx.fillStyle = '#45a29e'; ctx.fillRect(-w / 2 - 12, hOffset - 6, 8, 12); ctx.fillRect(w / 2 + 4, hOffset - 6, 8, 12);
+    ctx.save(); 
+    ctx.translate(x, y); 
+    ctx.rotate(angle); 
 
-    // 4. Khối cổ nối liền thân với đầu (Tùy chỉnh)
+    // Hiệu ứng phát sáng tổng thể
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = colorStr;
+
+    // 1. Thân giáp chính vát góc hiện đại
+    ctx.fillStyle = '#1f2833';
+    ctx.strokeStyle = colorStr;
+    ctx.lineWidth = 2;
+    
+    ctx.beginPath();
+    ctx.moveTo(-w/2 + 6, -h/2);
+    ctx.lineTo(w/2 - 6, -h/2);
+    ctx.lineTo(w/2, h/2 - 6);
+    ctx.lineTo(w/2 - 6, h/2);
+    ctx.lineTo(-w/2 + 6, h/2);
+    ctx.lineTo(-w/2, h/2 - 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 2. Lò phản ứng năng lượng trước ngực
+    let corePulse = (Math.sin(Date.now() / 200) + 1) / 2;
+    ctx.shadowBlur = 10 * corePulse;
+    ctx.shadowColor = '#ff007f';
+    ctx.fillStyle = '#ff007f';
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. Đường viền bo mạch chiến thuật trên thân
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#45a29e';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-10, -12); ctx.lineTo(10, -12);
+    ctx.moveTo(-12, -2); ctx.lineTo(12, -2);
+    ctx.stroke();
+
+    // 4. Tay & Giáp vai so le (Alternating Cyber Arms)
+    let timeVal = Date.now() / 150;
+    let leftArmY = isFriend ? Math.sin(timeVal) * 6 : Math.min(10, Math.max(-10, -vy * 1.2)) + Math.sin(timeVal) * 4;
+    let rightArmY = isFriend ? Math.sin(timeVal + Math.PI) * 6 : Math.min(10, Math.max(-10, -vy * 1.2)) + Math.sin(timeVal + Math.PI) * 4;
+
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#ff007f';
+    
+    // Tay trái
+    ctx.fillStyle = '#ff007f';
+    ctx.fillRect(-w/2 - 10, leftArmY - 6, 8, 14);
     ctx.fillStyle = colorStr;
-    ctx.fillRect(-10, -h / 2 + (-4), 20, 16);
+    ctx.fillRect(-w/2 - 8, leftArmY + 8, 4, 6);
 
-    // 5. Khuôn mặt Emoji
+    // Tay phải
+    ctx.fillStyle = '#ff007f';
+    ctx.fillRect(w/2 + 2, rightArmY - 6, 8, 14);
+    ctx.fillStyle = colorStr;
+    ctx.fillRect(w/2 + 4, rightArmY + 8, 4, 6);
+
+    // 5. Vòng cổ / Khung đỡ cổ công nghệ
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = colorStr;
+    ctx.fillStyle = colorStr;
+    ctx.fillRect(-8, -h/2 - 6, 16, 6);
+
+    // 6. Đầu Emoji phía trên
     ctx.save();
-    ctx.font = "30px Arial";
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ffff00';
+    ctx.font = "20px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowBlur = 0; 
-    let emojiY = -h / 2 + (4); 
-    ctx.fillText(currentEmoji || "😎", 0, emojiY);
+    ctx.fillText(currentEmoji || "😎", 0, -h/2 - 18);
     ctx.restore();
 
     ctx.restore();
